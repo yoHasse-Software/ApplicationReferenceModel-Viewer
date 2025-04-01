@@ -1,0 +1,45 @@
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .n1-box {
+    /* border: 1px dotted var(--pico-secondary); */
+    background-color: var(--pico-secondary);
+  }
+
+  .n1-box>header {
+    background-color: var(--pico-secondary);
+  }
+
+  .n1-box>header h1 {
+    color: var(--pico-contrast-inverse);
+  }
+
+  .n2-box {
+    border: 1px dotted var(--pico-primary);
+
+  }
+
+  .n3-box>header {
+    background-color: var(--pico-secondary);
+  }
+
+  .n3-box {
+    border: 1px solid var(--pico-secondary);
+  }
+
+  .n3-box>header h3 {
+    color: var(--pico-contrast-inverse);
+  }
+
+  .app {
+    border: 1px dotted var(--pico-primary);
+    background-color: var(--pico-primary);
+    color: var(--pico-contrast-inverse);
+    display: flex;
+    justify-content: space-between;
+  }
