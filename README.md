@@ -1,38 +1,78 @@
-# sv
+# ARM Viewer
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+ARM Viewer is a SvelteKit-based application for visualizing application reference models. It allows users to upload structured data (e.g., CSV or Excel files), group and filter the data, and apply conditional formatting rules for better visualization.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Data Upload**: Upload `.xlsx` files to visualize hierarchical data.
+- **Grouping**: Group data into multiple levels (N1, N2, N3, and applications).
+- **Filtering**: Filter data at each level to focus on specific subsets.
+- **Conditional Formatting**: Define rules to highlight data with emojis and styles.
+- **Responsive Design**: Automatically adjusts to different screen sizes.
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Project Structure
 
-# create a new project in my-app
-npx sv create my-app
+```
+├── src/
+│   ├── app.d.ts                # Global TypeScript definitions
+│   ├── app.html                # HTML template for the app
+│   ├── lib/
+│   │   ├── components/         # Svelte components
+│   │   │   ├── AppMap.svelte               # Main visualization component
+│   │   │   ├── Sidebar.svelte              # Sidebar for filtering and display options
+│   │   │   ├── NLevelView.svelte           # Component for hierarchical views
+│   │   │   ├── ConditionalFormatDialogue.svelte # Conditional formatting UI
+│   │   ├── types.d.ts          # TypeScript type definitions
+│   ├── routes/
+│   │   ├── +layout.svelte      # Layout for the app
+│   │   ├── +page.svelte        # Main page of the app
+├── static/
+│   ├── css/
+│   │   ├── app.css             # Custom styles for the app
+├── svelte.config.js            # SvelteKit configuration
+├── tsconfig.json               # TypeScript configuration
+├── vite.config.ts              # Vite configuration
 ```
 
-## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/arm-viewer.git
+   cd arm-viewer
+    ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
 ```bash
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+4. Open your browser and navigate to `http://localhost:5173` to view the application.
 
-To create a production version of your app:
 
-```bash
-npm run build
-```
+## Usage
+1. Upload a `.xlsx` file using the upload button.
+2. Use the sidebar to group and filter the data by N1, N2, N3, and applications.
+3. Define conditional formatting rules to highlight specific data points.
+4. Explore the hierarchical views of the data.
 
-You can preview the production build with `npm run preview`.
+## Scripts
+* `npm run dev`: Start the development server.
+* `npm run build`: Build the application for production.
+* `npm run preview`: Preview the production build locally.
+* `npm run lint`: Run ESLint to check for code quality issues.
+* `npm run prettier`: Format the code using Prettier.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Dependencies
+- [SvelteKit](https://kit.svelte.dev/): Framework for building Svelte applications.
+- [Vite](https://vitejs.dev/): Build tool that provides a fast development environment.
+- [XLSX](): Library for parsing and writing spreadsheet files.
+
