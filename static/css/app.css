@@ -1,45 +1,81 @@
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1rem;
-    width: 100%;
-  }
 
-  .n1-box {
-    /* border: 1px dotted var(--pico-secondary); */
-    background-color: var(--pico-secondary);
-  }
 
-  .n1-box>header {
-    background-color: var(--pico-secondary);
-  }
+.n1-box {
+  /* border: 1px dotted var(--pico-secondary); */
+  background-color: var(--pico-secondary);
+}
 
-  .n1-box>header h1 {
-    color: var(--pico-contrast-inverse);
-  }
+.n1-box>header {
+  background-color: var(--pico-secondary);
+}
 
-  .n2-box {
-    border: 1px dotted var(--pico-primary);
+.n1-box>header h1 {
+  color: var(--pico-contrast-inverse);
+}
 
-  }
+.n2-box {
+  border: 1px dotted var(--pico-primary);
 
-  .n3-box>header {
-    background-color: var(--pico-secondary);
-  }
+}
 
-  .n3-box {
-    border: 1px solid var(--pico-secondary);
-  }
+.n3-box>header {
+  background-color: var(--pico-secondary);
+}
 
-  .n3-box>header h3 {
-    color: var(--pico-contrast-inverse);
-  }
+.n3-box {
+  border: 1px solid var(--pico-secondary);
+}
 
-  .app {
-    border: 1px dotted var(--pico-primary);
-    background-color: var(--pico-primary);
-    color: var(--pico-contrast-inverse);
-    display: flex;
-    justify-content: space-between;
-  }
+.n3-box>header h3 {
+  color: var(--pico-contrast-inverse);
+}
+
+.app {
+  border: 1px dotted var(--pico-primary);
+  background-color: var(--pico-primary);
+  color: var(--pico-contrast-inverse);
+  display: flex;
+  justify-content: space-between;
+}
+
+
+@media (min-width: 576px) {
+    dialog>article,
+    dialog>fieldset,
+    dialog>div {
+        max-width: unset;
+    }
+}
+
+@media (min-width: 768px) {
+    dialog>article,
+    dialog>fieldset,
+    dialog>div  {
+        max-width: 700px;
+    }
+}
+
+@media (min-width: 1024px) {
+    dialog>article,
+    dialog>fieldset,
+    dialog>div  {
+        max-width: 950px;
+    }
+}
+
+@media (min-width: 1280px) {
+    dialog>article,
+    dialog>fieldset,
+    dialog>div  {
+        max-width: 1200px;
+    }
+}
+
+@media (min-width: 1536px) {
+    dialog>article,
+    dialog>fieldset,
+    dialog>div  {
+        max-width: 1450px;
+    }
+}

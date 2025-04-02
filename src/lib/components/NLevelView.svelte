@@ -11,6 +11,7 @@
         title,
         gridChildren = false,
         addHeader = true,
+        styling = '',
         children } = $props();
 
     function getClassName() {
@@ -35,7 +36,7 @@
 </script>
 
 {#if displayLevel}
-<article class={getClassName()}>
+<article class={getClassName()} style={styling}>
     {#if addHeader}
     <header>
         {#if level === 1}
@@ -62,6 +63,18 @@
 {@render children?.()}
 
 {/if}
+
+
+<style>
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1rem;
+    width: 100%;
+}
+
+
+</style>
 
 
 

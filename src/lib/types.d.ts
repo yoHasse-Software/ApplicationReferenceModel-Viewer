@@ -5,26 +5,48 @@ export type AppSoftware = {
     };
 }
 
-export type N3Group = { n3: string; apps: App[] };
 
-export type N2Group = { n2: string; children: N3Group[] };
-
-export type N1Group = { n1: string; groups: N2Group[] };
+export type GroupLevel = { levelName: string; groups?: GroupLevel[]; children?: AppSoftware[]; };
 
 export type DisplayOptions = {
     showN1: boolean;
     showN2: boolean;
     showN3: boolean;
     showApps: boolean;
+    displayEmpty: boolean;
 }
 
-export type ConditionalFormattingRuleType = 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';
+export type LevelNode = {
+    id: string;
+    name: string;
+    parent?: string; // ID of the parent node
+    children?: LevelNode[];
+    isGroup: boolean;
+}
+
+
+export type RuleOperator = 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';
 
 
 
 export type ConditionalFormatting = { 
+    id: string;
     name: string;
     column: string; 
     value: string; 
-    type: ConditionalFormattingRuleType;
-    emoji: string }
+    operator: RuleOperator;
+    styling: {
+        backgroundColor: {
+            isSet: boolean;
+            color?: string = '#000000';
+        };
+        color: {
+            isSet: boolean;
+            color?: string = '#000000';
+        };
+        fontWeight?: 'normal' | 'bold';
+        fontStyle?: 'normal' | 'italic';
+        textDecoration?: 'none' | 'underline' | 'line-through';
+        content?: string;
+    }
+}

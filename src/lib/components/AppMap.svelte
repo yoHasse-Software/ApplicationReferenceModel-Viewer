@@ -2,15 +2,14 @@
     import { onMount } from 'svelte';
     import * as XLSX from 'xlsx';
     import Sidebar from './Sidebar.svelte';
-    import { type AppSoftware, type ConditionalFormatting, type ConditionalFormattingRuleType, type DisplayOptions, type N1Group } from '$lib/types';
+    import { type AppSoftware, type ConditionalFormatting, type RuleOperator, type DisplayOptions, type GroupLevel } from '$lib/types';
     import NLevelView from './NLevelView.svelte';
     import ConditionalFormatDialogue from './ConditionalFormatDialogue.svelte';
-
-  
+    import HierarchyDiagram from './HierarchyDiagram.svelte';
  
     // Example grouped data based on your CSV
-    let data: N1Group[] = $state([]);
-    let filteredData: N1Group[] = $state([]);
+    let data: GroupLevel[] = $state([]);
+    let filteredData: GroupLevel[] = $state([]);
     let isConditionalFormatingDialogueOpen = $state(false);
 
     let conditionalFormatDialogue: ConditionalFormatDialogue;
@@ -31,23 +30,58 @@
         showN1: true,
         showN2: true,
         showN3: true,
-        showApps: true
+        showApps: true,
+        displayEmpty: false
     });
+
+    function isHeirarcyEmpty(root: GroupLevel): boolean {
+      const stack: GroupLevel[] = [root];
+      const visited = new Set<GroupLevel>();
+
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (visited.has(current)) continue;
+        visited.add(current);
+
+        // If this node has children, it's NOT empty
+        if (current.children && current.children.length > 0) {
+          return false;
+        }
+
+        // Continue checking nested groups
+        if (current.groups && current.groups.length > 0) {
+          for (const group of current.groups) {
+            stack.push(group);
+          }
+        }
+      }
+
+      // No children found anywhere in the hierarchy
+      return true;
+    }
+
 
 
     function getConditionalRules(app: AppSoftware): ConditionalFormatting[] {
       const rules = conditionalFormatDialogue.getConditionalFormattingRulese();
-      const condRules = rules
-        .filter(r => app.metadata[r.column] !== undefined && r.value === app.metadata[r.column])
+
+      const appRules = rules
+        .filter(r => app.metadata[r.column] !== undefined && r.value === app.metadata[r.column]);
+
+      if (appRules.length === 0) {
+        return [];
+      }
+
+      const condRules = appRules
         .filter(r => {
           if (r.column === 'default') {
             return true; // Default rule applies to all apps
           }
-          switch(r.type) {
+          switch(r.operator) {
             case 'equals':
-              return app.metadata[r.column] === r.value;
+              return app.metadata[r.column].toString().toLocaleLowerCase() === r.value.toLocaleLowerCase();
             case 'contains':
-              return app.metadata[r.column].toString().includes(r.value);
+              return app.metadata[r.column].toString().toLocaleLowerCase().includes(r.value.toLocaleLowerCase());
             case 'startsWith':
               return app.metadata[r.column].toString().startsWith(r.value);
             case 'endsWith':
@@ -72,21 +106,50 @@
           }
         });
 
-
       return condRules ?? [];
     }
 
+    function getStyling(app: AppSoftware): string {
+        const rules = getConditionalRules(app);
+        if (rules.length === 0) {
+          return '';
+        }
 
-    function groupData(csvRows: Array<Record<string, string>>, n1Key: string, n2Key: string, n3Key: string, appKey: string): N1Group[] {
-        const grouped: N1Group[] = [];
+
+        let styleString = '';
+        for (const rule of rules) {
+          const { styling } = rule;
+          if (styling.backgroundColor.isSet) {
+            styleString += `background-color: ${styling.backgroundColor.color};`;
+          }
+          if (styling.color.isSet) {
+            styleString += `color: ${styling.color.color};`;
+          }
+          if (styling.fontWeight) {
+            styleString += `font-weight: ${styling.fontWeight};`;
+          }
+          if (styling.fontStyle) {
+            styleString += `font-style: ${styling.fontStyle};`;
+          }
+          if (styling.textDecoration) {
+            styleString += `text-decoration: ${styling.textDecoration};`;
+          }
+        }
+
+        return styleString;
+    }
+
+
+    function groupData(csvRows: Array<Record<string, string>>, n1Key: string, n2Key: string, n3Key: string, appKey: string): GroupLevel[] {
+        const grouped: GroupLevel[] = [];
         for (const row of csvRows) {
             const n1 = row[n1Key];
             const n2 = row[n2Key];
             const n3 = row[n3Key];
-            const app = row[appKey] ? {
+            const app: AppSoftware | null = row[appKey] ? {
                 name: row[appKey],
                 metadata: {} as Record<string, string>
-            } : undefined;
+            } : null;
 
             // Get additional columns and add them to the app object
             const metadata = row 
@@ -99,22 +162,22 @@
                 : {};
 
 
-            let n1Group = grouped.find(g => g.n1 === n1);
+            let n1Group = grouped.find(g => g.levelName === n1);
             if (!n1Group) {
-              n1Group = { n1, groups: [] };
+              n1Group = { levelName: n1, groups: [] };
               grouped.push(n1Group);
             }
 
-            let n2Group = n1Group.groups.find(g => g.n2 === n2);
+            let n2Group = n1Group.groups?.find(g => g.levelName === n2);
             if (!n2Group) {
-              n2Group = { n2, children: [] };
-              n1Group.groups.push(n2Group);
+              n2Group = { levelName: n2, groups: [] } as GroupLevel;
+              n1Group.groups?.push(n2Group);
             }
 
-            let n3Group = n2Group.children.find(g => g.n3 === n3);
+            let n3Group = n2Group.groups?.find(g => g.levelName === n3);
             if (!n3Group) {
-              n3Group = { n3, apps: [] };
-              n2Group.children.push(n3Group);
+              n3Group = { levelName: n3, children: [] };
+              n2Group.groups?.push(n3Group);
             }
 
             if (app) {
@@ -123,7 +186,7 @@
                     app.metadata[key] = metadata[key];
                 }
               }
-              n3Group.apps.push(app);
+              n3Group.children?.push(app);
             }
         }
 
@@ -194,7 +257,7 @@
         readData();
     }
 
-    function onDataFiltered(data: N1Group[]) {
+    function onDataFiltered(data: GroupLevel[]) {
         filteredData = data;
     }
 
@@ -285,27 +348,39 @@
   {#if data.length > 0}
     <h1>Tillämpningsarkitekturen</h1>
   {/if}
-  
-    {#each filteredData as n1Block}
-    <NLevelView level={1} title={n1Block.n1} displayLevel={displayOptions.showN1}>
-        {#each n1Block.groups as n2Block}
-          <NLevelView level={2} title={n2Block.n2} displayLevel={displayOptions.showN2} gridChildren={true}>
-            {#each n2Block.children as n3Block}
-              <NLevelView level={3} title={n3Block.n3} displayLevel={displayOptions.showN3} gridChildren={true}>
-                  {#each n3Block.apps as app}
-                    <NLevelView level={4} title={app} displayLevel={displayOptions.showApps} addHeader={false}>
-                          <span>{app.name}</span>
-                          <div>
-                          {#each getConditionalRules(app) as rule}
-                            <span class="formats" data-tooltip={`${rule.name} - ${rule.column}`} >{rule.emoji}</span>
-                          {/each}
-                        </div>
-                    </NLevelView>
-                  {/each}
-              </NLevelView>
-            {/each}
-          </NLevelView>
-        {/each}
-    </NLevelView>
 
-    {/each}
+  <HierarchyDiagram {data} />
+
+  
+<!-- {#each filteredData as n1Block}
+  <NLevelView level={1} title={n1Block.levelName} displayLevel={displayOptions.showN1 && (displayOptions.displayEmpty || !isHeirarcyEmpty(n1Block))}>
+      {#each n1Block.groups ?? [] as n2Block}
+        <NLevelView level={2} title={n2Block.levelName} displayLevel={displayOptions.showN2 && (displayOptions.displayEmpty || !isHeirarcyEmpty(n2Block))} gridChildren={true}>
+          {#each n2Block.groups ?? [] as n3Block}
+            <NLevelView level={3} title={n3Block.levelName} displayLevel={displayOptions.showN3 && (displayOptions.displayEmpty || !isHeirarcyEmpty(n3Block))} gridChildren={true}>
+                {#each n3Block.children ?? [] as app}
+                  <NLevelView level={4} title={app} displayLevel={displayOptions.showApps} addHeader={false}
+                    styling={getStyling(app)}>
+                        <span>{app.name}</span>
+                        <div>
+                        {#each getConditionalRules(app) as rule}
+                          <span class="formats" data-tooltip={`${rule.name} - ${rule.column}`} >{rule.styling.content ?? ''}</span>
+                        {/each}
+                      </div>
+                  </NLevelView>
+                {/each}
+            </NLevelView>
+          {/each}
+        </NLevelView>
+      {/each}
+  </NLevelView>
+{/each} -->
+
+
+
+<style>
+  span[data-tooltip]{
+    border-bottom: unset;
+  }
+  
+</style>

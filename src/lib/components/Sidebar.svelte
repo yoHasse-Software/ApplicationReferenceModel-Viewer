@@ -1,6 +1,6 @@
 
 <script lang="ts">
-    import type { AppSoftware, ConditionalFormatting, DisplayOptions, N1Group } from "$lib/types";
+    import type { AppSoftware, ConditionalFormatting, DisplayOptions, GroupLevel } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
     import ConditionalFormatDialogue from "./ConditionalFormatDialogue.svelte";
@@ -11,8 +11,8 @@
         onClearData,
         onConditionalFormatDialogueOpen
      }:{
-        data: N1Group[];
-        onDataFiltered: (filteredData: N1Group[]) => void;
+        data: GroupLevel[];
+        onDataFiltered: (filteredData: GroupLevel[]) => void;
         onDisplayChanged: (displayOptions: DisplayOptions) => void;
         onClearData: () => void;
         onConditionalFormatDialogueOpen: () => void;
@@ -36,7 +36,8 @@
         showN1: true,
         showN2: true,
         showN3: true,
-        showApps: true
+        showApps: true,
+        displayEmpty: false
     });
 
     let n1Options = $state([]) as string[];
@@ -63,25 +64,23 @@
                 break;
         }
 
-        const filteredData = data
-            .filter(n1g => !filters.n1 || n1g.n1 === filters.n1)
+        const filteredData: GroupLevel[] = data
+            .filter(n1g => !filters.n1 || n1g.levelName === filters.n1)
             .map(n1g => ({
             ...n1g,
-            groups: n1g.groups
-                .filter(n2g => !filters.n2 || n2g.n2 === filters.n2)
+            groups: n1g.groups?.filter(n2g => !filters.n2 || n2g.levelName === filters.n2)
                 .map(n2g => ({
                 ...n2g,
-                children: n2g.children
-                    .filter(n3g => !filters.n3 || n3g.n3 === filters.n3)
+                groups: n2g.groups?.filter(n3g => !filters.n3 || n3g.levelName === filters.n3)
                     .map(n3g => ({
                         ...n3g,
-                        apps: n3g.apps.filter(app => !filters.app || app.name === filters.app)
+                        children: n3g.children?.filter(app => !filters.app || app.name === filters.app)
                     }))
-                    .filter(n3g => n3g.apps.length > 0)
+                    .filter(n3g => n3g.children?.length ?? 0 > 0)
                 }))
-                .filter(n2g => n2g.children.length > 0)
+                .filter(n2g => n2g.groups?.length ?? 0 > 0)
             }))
-            .filter(n1g => n1g.groups.length > 0);
+            .filter(n1g => n1g.groups?.length ?? 0 > 0);
 
         // Update the options for the filters based on the filtered data
         onDataFitered(filteredData);
@@ -89,11 +88,12 @@
         switch (changedFilter) {
             case 'n1':
                 console.log('n1', filters.n1, filteredData);
-                n2Options = [...new Set(filteredData.flatMap(n1g => n1g.groups.map(n2g => n2g.n2)))];
+                n2Options = [...new Set(filteredData.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
             case 'n2':
-                n3Options = [...new Set(filteredData.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.map(n3g => n3g.n3))))];
+                n3Options = [...new Set(filteredData.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName).filter((name): name is string => name !== undefined) ?? []) ?? []))];
             case 'n3':
-                appOptions = [...new Set(filteredData.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.flatMap(n3g => n3g.apps))))];
+                appOptions = [...new Set(filteredData.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
+                    .filter((app): app is AppSoftware => app !== undefined);
             case 'app':
                 break;
         }
@@ -105,34 +105,35 @@
         onDisplayChanged(displayOptions);
     }
 
+
+
     function updateFiltering(){
         if(!filters.n1 && filters.n1.trim() === '' 
             && !filters.n2 && filters.n2.trim() === '' 
             && !filters.n3 && filters.n3.trim() === ''
             && !filters.app && filters.app.trim() === '') {
-
-                $inspect('no filters', filters);
-                n1Options = [...new Set(data.map(n1g => n1g.n1))];
-                n2Options = [...new Set(data.flatMap(n1g => n1g.groups.map(n2g => n2g.n2)))];
-                n3Options = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.map(n3g => n3g.n3))))];
-                appOptions = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.flatMap(n3g => n3g.apps))))];
+                n1Options = [...new Set(data.map(n1g => n1g.levelName))];
+                n2Options = [...new Set(data.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
+                n3Options = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName).filter((name): name is string => name !== undefined) ?? []) ?? []))];
+                appOptions = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
+                    .filter((app): app is AppSoftware => app !== undefined);
                 return;
         }
 
         if (filters.n1 && filters.n1.trim() !== '') {
-            n2Options = [...new Set(data.filter(n1g => n1g.n1 === filters.n1).flatMap(n1g => n1g.groups.map(n2g => n2g.n2)))];
+            n2Options = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
         } else {
-            n2Options = [...new Set(data.flatMap(n1g => n1g.groups.map(n2g => n2g.n2)))];
+            n2Options = [...new Set(data.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName).filter((name): name is string => name !== undefined)))] as string[];
         }
         if (filters.n2 && filters.n2.trim() !== '') {
-            n3Options = [...new Set(data.filter(n1g => n1g.n1 === filters.n1).flatMap(n1g => n1g.groups.filter(n2g => n2g.n2 === filters.n2).flatMap(n2g => n2g.children.map(n3g => n3g.n3))) )];
+            n3Options = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.filter(n2g => n2g.levelName === filters.n2).flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName))) )] as string[];
         } else {
-            n3Options = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.map(n3g => n3g.n3))))];
+            n3Options = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName))))] as string[];
         }
         if (filters.n3 && filters.n3.trim() !== '') {
-            appOptions = [...new Set(data.filter(n1g => n1g.n1 === filters.n1).flatMap(n1g => n1g.groups.filter(n2g => n2g.n2 === filters.n2).flatMap(n2g => n2g.children.filter(n3g => n3g.n3 === filters.n3).flatMap(n3g => n3g.apps))) )];
+            appOptions = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.filter(n2g => n2g.levelName === filters.n2).flatMap(n2g => n2g.groups?.filter(n3g => n3g.levelName === filters.n3).flatMap(n3g => n3g.children))) )] as AppSoftware[];
         } else {
-            appOptions = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.flatMap(n3g => n3g.apps))))];
+            appOptions = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children))))] as AppSoftware[];
         }
     }
 
@@ -149,10 +150,7 @@
 
     onMount(() => {
         // Initialize the options for the filters based on the data
-        n1Options = [...new Set(data.map(n1g => n1g.n1))];
-        n2Options = [...new Set(data.flatMap(n1g => n1g.groups.map(n2g => n2g.n2)))];
-        n3Options = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.map(n3g => n3g.n3))))];
-        appOptions = [...new Set(data.flatMap(n1g => n1g.groups.flatMap(n2g => n2g.children.flatMap(n3g => n3g.apps))))];
+        updateFiltering();
     });
 
 
@@ -224,6 +222,17 @@
             <details name="display-opts" >
                 <summary role="button" class="outline">Display options</summary>
                 <ul>
+                    <li>
+                        <label>
+                            <input type="checkbox" role="switch" 
+                                bind:checked={displayOptions.displayEmpty} 
+                                onchange={displayOptionsChanged}  /> Display Empty levels
+
+                        </label>
+                        <small >
+                            <em>If true, include models that doesn't have an application assigned.</em>
+                        </small>
+                    </li>
                     <li>
                         <label>
                             <input type="checkbox" role="switch" bind:checked={displayOptions.showN1} onchange={displayOptionsChanged} /> Show N1
