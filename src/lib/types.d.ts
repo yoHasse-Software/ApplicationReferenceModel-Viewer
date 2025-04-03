@@ -17,6 +17,7 @@ export type DisplayOptions = {
 }
 
 export type LevelNode = {
+    value: number;
     id: string;
     name: string;
     parent?: string; // ID of the parent node

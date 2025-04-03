@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import * as XLSX from 'xlsx';
     import Sidebar from './Sidebar.svelte';
-    import { type AppSoftware, type ConditionalFormatting, type RuleOperator, type DisplayOptions, type GroupLevel } from '$lib/types';
+    import { type AppSoftware, type ConditionalFormatting, type RuleOperator, type DisplayOptions, type GroupLevel, type LevelNode } from '$lib/types';
     import NLevelView from './NLevelView.svelte';
     import ConditionalFormatDialogue from './ConditionalFormatDialogue.svelte';
     import HierarchyDiagram from './HierarchyDiagram.svelte';
@@ -11,6 +11,7 @@
     let data: GroupLevel[] = $state([]);
     let filteredData: GroupLevel[] = $state([]);
     let isConditionalFormatingDialogueOpen = $state(false);
+    let nodeData: LevelNode[] = $state([]);
 
     let conditionalFormatDialogue: ConditionalFormatDialogue;
     
@@ -274,8 +275,98 @@
         }
         filteredData = data;
         columnHeaders = JSON.parse(localStorage.getItem('columnHeaders') || '[]');
-
+        nodeData = generateNodeTree(data);
     }
+
+    function convertToNodeIterative(root: GroupLevel): LevelNode {
+        const nodeMap = new Map<string, LevelNode>();
+        const childrenMap = new Map<string, LevelNode[]>(); // to collect children per parent
+        const toProcess: Set<{ group: GroupLevel; parentId?: string }> = new Set();
+
+        const rootId = crypto.randomUUID();
+        const rootNode: LevelNode = { 
+            id: rootId, 
+            value: 0,
+            name: root.levelName,
+            isGroup: true,
+        };
+        nodeMap.set(rootId, rootNode);
+
+        toProcess.add({ group: root, parentId: undefined });
+
+        // Set is used, but could also be Array if you want guaranteed FIFO/LIFO order
+        while (toProcess.size > 0) {
+            const [entry] = toProcess; // Get one from Set
+            toProcess.delete(entry);
+
+            const { group, parentId } = entry;
+            const currentId = [...nodeMap.entries()].find(
+                ([, node]) => node.name === group.levelName && node.parent === parentId
+            )?.[0] ?? crypto.randomUUID();
+
+            const currentNode = nodeMap.get(currentId) ?? {
+                id: currentId,
+                value: 0,
+                name: group.levelName,
+                parent: parentId,
+                isGroup: true,
+            };
+
+            // Store back in case it wasn't yet
+            nodeMap.set(currentId, currentNode);
+
+            // Prepare to add children
+            const groupChildren: LevelNode[] = [];
+
+            // Add AppSoftware as leaves
+            if (group.children) {
+                for (const app of group.children) {
+                    const appNode: LevelNode = {
+                        id: crypto.randomUUID(),
+                        value: 0,
+                        name: app.name,
+                        parent: currentId,
+                        isGroup: false,
+                    };
+                    groupChildren.push(appNode);
+                    nodeMap.set(appNode.id, appNode);
+                }
+            }
+
+            // Add nested groups
+            if (group.groups) {
+                for (const subgroup of group.groups) {
+                    const subgroupId = crypto.randomUUID();
+                    const subgroupNode: LevelNode = {
+                        id: subgroupId,
+                        value: 0,
+                        name: subgroup.levelName,
+                        parent: currentId,
+                        isGroup: true,
+                    };
+                    nodeMap.set(subgroupId, subgroupNode);
+                    groupChildren.push(subgroupNode);
+                    toProcess.add({ group: subgroup, parentId: currentId });
+                }
+            }
+
+            if (groupChildren.length > 0) {
+                currentNode.children = groupChildren;
+            }
+        }
+
+        return rootNode;
+    }
+
+    function generateNodeTree(groups: GroupLevel[]): LevelNode[] {
+        const nodes: LevelNode[] = [];
+        for (const group of groups) {
+            const groupNode = convertToNodeIterative(group);
+            nodes.push(groupNode);
+        }
+        return nodes;
+    }
+
 
     onMount(() => {
         readData();
@@ -349,7 +440,7 @@
     <h1>Tillämpningsarkitekturen</h1>
   {/if}
 
-  <HierarchyDiagram {data} />
+  <HierarchyDiagram data={nodeData}/>
 
   
 <!-- {#each filteredData as n1Block}
