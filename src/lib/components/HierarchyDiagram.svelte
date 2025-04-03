@@ -3,23 +3,32 @@
     import * as d3 from 'd3';
     import NodeGroup from './NodeGroup.svelte';
     import type { LevelNode } from '$lib/types';
-  
-    const { data }:{ data: LevelNode[]} = $props();
+    import { ConditionalFormattingRules, displayOptions, FilteredData } from '$lib/datastore.svelte';
+
 
     const LABEL_HEIGHT = 24;
+    const PADDING = 10;
 
   
     let svgContainer: SVGSVGElement;
     let groupContainer: SVGGElement;
   
     let layoutNodes: d3.HierarchyRectangularNode<LevelNode>[] = $state([]);
+
+    const VERTICAL_ON_STACKING = 2; // Number of nodes to force vertical stacking
         
     function estimateSizeForRoot(root: LevelNode): [number, number] {
         const maxDepth = getDepth(root);
         const leafCount = countLeaves(root);
 
-        const width = Math.max(leafCount * 120, 300); // base width per leaf node
-        const height = Math.max(maxDepth * 80, 200);  // base height per level
+        const width = Math.max(leafCount * 120, 500); // base width per leaf node
+        // if(root.isGroup && root.children && root.children.length > VERTICAL_ON_STACKING){
+        //     const verticalHeight = Math.max(maxDepth*root.children.length, 500); // base height per leaf node
+        //     return [width, verticalHeight];
+        // }
+        const height = Math.max(maxDepth, 150);  // base height per level
+
+
 
         return [width, height];
     }
@@ -34,68 +43,82 @@
         return node.children.reduce((acc, child) => acc + countLeaves(child), 0);
     }
   
-    function renderLayout() {
-      const width = svgContainer.clientWidth || 5000;
-      const height = svgContainer.clientHeight || 9000;
-      layoutNodes = generateTreemapLayout(data, width, height); // Only take the first root for now
+    function renderLayout(renderData: LevelNode[]) {
+        layoutNodes = generateTreemapLayout(renderData); // Only take the first root for now
     }
-    function generateTreemapLayout(
-    data: LevelNode[],
-    width: number,
-    height: number
-): d3.HierarchyRectangularNode<LevelNode>[] {
-    const PADDING_BETWEEN_ROOTS = 20;
 
-    const roots = data.map(node =>
-        d3.hierarchy(node, d => d.children) as d3.HierarchyRectangularNode<LevelNode>
-    );
+    function getSum(node: LevelNode) {
+        if(!node.isGroup){
+            return LABEL_HEIGHT;
+        }
 
+        if(!node.children || node.children.length === 0) {
+            return LABEL_HEIGHT;
+        }
 
-    let currentYOffset = 0;
+        return 0;
 
-    roots.forEach(root => {
+    }
 
-        const [w, h] = estimateSizeForRoot(root.data);
-
-        const treemap = d3.treemap<LevelNode>()
-            .size([w, h])
-            .paddingInner(10)
-            .paddingOuter(10)
-            .paddingTop(LABEL_HEIGHT * 1.3)
-            .round(true); // helps avoid subpixel jitter
-        // Ensure empty leaves are visible
-        root.eachBefore(node => {
-            if (!node.children && node.value === 0) {
-                node.data.value = 1;
-            }
-        });
-
-        root.sum(d => 1);
-        treemap(root);
-
-        root.each(node => {
-            node.y0 += currentYOffset;
-            node.y1 += currentYOffset;
-        });
-
-        currentYOffset += h + PADDING_BETWEEN_ROOTS;
-    });
-
-    return roots;
-
-    // Helper: recursively shift each group’s children
-    function shiftChildrenForLabels(node: d3.HierarchyRectangularNode<LevelNode>, dy: number) {
-        if (node.children && node.children.length > 0) {
-            node.children.forEach(child => {
-                child.y0 += dy;
-                child.y1 += dy;
-            });
-
-            node.children.forEach(child => shiftChildrenForLabels(child, dy));
+    function customTile(node: d3.HierarchyRectangularNode<LevelNode>, x0: number, y0: number, x1: number, y1: number) {
+        const childCount = node.children?.length || 0;
+        if (node.depth === 0 && childCount > VERTICAL_ON_STACKING) { // Force vertical stacking for N2
+            d3.treemapSlice(node, x0, y0, x1, y1);
+        } else {
+            d3.treemapBinary(node, x0, y0, x1, y1); // Horizontal for other levels
         }
     }
-}
 
+    function generateTreemapLayout(
+        data: LevelNode[],
+    ): d3.HierarchyRectangularNode<LevelNode>[] {
+        const PADDING_BETWEEN_ROOTS = 20;
+
+        const roots = data.map(node =>
+            d3.hierarchy(node, d => d.children) as d3.HierarchyRectangularNode<LevelNode>
+        );
+
+
+        let currentYOffset = 0;
+
+        roots.forEach(root => {
+
+            const [w, h] = estimateSizeForRoot(root.data);
+
+            const treemap = d3.treemap<LevelNode>()
+                .size([w, h])
+                .paddingInner(PADDING)
+                .paddingOuter(PADDING)
+                .paddingTop(LABEL_HEIGHT * 1.3)
+                .round(true); // helps avoid subpixel jitter
+            
+ 
+            root.sum(d => getSum(d));
+
+            treemap(root);
+
+
+            root.each(node => {
+                node.y0 += currentYOffset;
+                node.y1 += currentYOffset;
+            });
+
+            currentYOffset += h + PADDING_BETWEEN_ROOTS;
+        });
+
+        return roots;
+
+    }
+
+    $effect(() => {
+        displayOptions;
+        ConditionalFormattingRules;
+        renderLayout(FilteredData);
+    });
+
+    export function reRender() {
+        renderLayout(FilteredData);
+    }
 
     onMount(() => {
       const svg = d3.select(svgContainer);
@@ -107,19 +130,14 @@
           .on('zoom', ({ transform }) => g.attr('transform', transform))
       );
 
-  
-      renderLayout();
     });
 
 
-    function getMinimumNodeHeight(node: d3.HierarchyRectangularNode<LevelNode>) {
-        const calculatedHeight = node.y1 - node.y0 - node.depth * LABEL_HEIGHT;
-        return Math.max(calculatedHeight, LABEL_HEIGHT*1.1);
-    }
+
   </script>
   
-  <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
-    <g bind:this={groupContainer}>
+  <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc" overflow="hidden">
+    <g bind:this={groupContainer} overflow="hidden">
         {#if layoutNodes}
         {#each layoutNodes as root}
             {#each root.descendants() as node (node.data.id)}

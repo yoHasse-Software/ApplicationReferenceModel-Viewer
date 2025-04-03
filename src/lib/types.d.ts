@@ -23,6 +23,9 @@ export type LevelNode = {
     parent?: string; // ID of the parent node
     children?: LevelNode[];
     isGroup: boolean;
+    metadata?: {
+        [key: string]: string | number | boolean;
+    };
 }
 
 

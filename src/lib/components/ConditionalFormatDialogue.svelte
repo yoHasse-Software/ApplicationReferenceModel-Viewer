@@ -1,5 +1,6 @@
 
 <script lang="ts">
+    import { ConditionalFormattingRules, initConditionalFormattingRules, saveConditionalFormattingRulesToStorage } from "$lib/datastore.svelte";
     import type { ConditionalFormatting, RuleOperator } from "$lib/types";
     import { onMount } from "svelte";
 
@@ -9,7 +10,7 @@
         onClose,
      } = $props();
 
-    const conditionalFormattingRules: Array<ConditionalFormatting> = $state([]);
+    
     let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
 
 
@@ -55,52 +56,25 @@
     }
 
 
-    export function getConditionalFormattingRulese(): ConditionalFormatting[] {
-        return conditionalFormattingRules;
-
-    }
-
     function saveConditionalFormattningRules(index: number) {
+
         if (detailsRefs[index]) {
             detailsRefs[index].open = false;
         }
-        localStorage.setItem('conditionalFormattingRules', JSON.stringify(conditionalFormattingRules));
+
+        saveConditionalFormattingRulesToStorage();
     }
 
     function removeConditionalFormattingRule(index: number) {
-        conditionalFormattingRules.splice(index, 1);
+        ConditionalFormattingRules.splice(index, 1);
 
-        localStorage.setItem('conditionalFormattingRules', JSON.stringify(conditionalFormattingRules));
+        localStorage.setItem('ConditionalFormattingRules', JSON.stringify(ConditionalFormattingRules));
     }
 
 
 
     onMount(() => {
-        const storedRules = JSON.parse(localStorage.getItem('conditionalFormattingRules') || '[]');
-        if (storedRules.length > 0) {
-            conditionalFormattingRules.splice(0, conditionalFormattingRules.length);
-            conditionalFormattingRules.push(...storedRules);
-        } else {
-            // Create a guid
-            let id = crypto.randomUUID();
-            conditionalFormattingRules.push({
-                id: id,
-                name: '',
-                column: '',
-                value: '',
-                operator: 'equals',
-                styling:{
-                    backgroundColor: {
-                        isSet: false,
-                        color: '#ffffff',
-                    },
-                    color: {
-                        isSet: false,
-                        color: '#000000',
-                    },
-                }
-            });
-        }
+        initConditionalFormattingRules()
     });
 
 </script>
@@ -116,7 +90,7 @@
 
         <div>
             <h3>Conditional Formatting</h3>
-            {#each conditionalFormattingRules as rule, index (rule.id || index)}
+            {#each ConditionalFormattingRules as rule, index (rule.id || index)}
                 <details bind:this={detailsRefs[index]} aria-label="Display rule">
                     <summary role="button" class="outline">{rule.name.trim().length > 0 ? rule.name: "New rule"}</summary>
                 <div>
@@ -283,7 +257,7 @@
 
         <footer>
             <div role="group">
-                <button  onclick={() => conditionalFormattingRules.push({
+                <button  onclick={() => ConditionalFormattingRules.push({
                     id: crypto.randomUUID(),
                     name: '',
                     column: '',

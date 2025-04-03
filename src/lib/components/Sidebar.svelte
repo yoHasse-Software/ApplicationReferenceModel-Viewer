@@ -1,20 +1,13 @@
 
 <script lang="ts">
-    import type { AppSoftware, ConditionalFormatting, DisplayOptions, GroupLevel } from "$lib/types";
+    import { Data, setFilteredData } from "$lib/datastore.svelte";
+    import type { DisplayOptions, LevelNode } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
-    import ConditionalFormatDialogue from "./ConditionalFormatDialogue.svelte";
 
-    let { data,
-        onDataFiltered: onDataFitered,
-        onDisplayChanged,
-        onClearData,
+    let { 
         onConditionalFormatDialogueOpen
      }:{
-        data: GroupLevel[];
-        onDataFiltered: (filteredData: GroupLevel[]) => void;
-        onDisplayChanged: (displayOptions: DisplayOptions) => void;
-        onClearData: () => void;
         onConditionalFormatDialogueOpen: () => void;
     } = $props();
 
@@ -24,6 +17,12 @@
         isSidebarVisible = !isSidebarVisible;
     }
 
+    type Filter = {
+        n1: string;
+        n2: string;
+        n3: string;
+        app: string;
+    };
 
     let filters = $state({
         n1: '',
@@ -37,16 +36,103 @@
         showN2: true,
         showN3: true,
         showApps: true,
-        displayEmpty: false
+        displayEmpty: true
     });
 
     let n1Options = $state([]) as string[];
     let n2Options = $state([]) as string[];
     let n3Options = $state([]) as string[];
-    let appOptions = $state([]) as AppSoftware[];
+    let appOptions = $state([]) as LevelNode[];
 
     // Populate the options for the filters based on the data
 
+    function applyDisplayOptions(
+            node: LevelNode,
+            options: DisplayOptions,
+            depth = 1
+        ): LevelNode | null {
+            const showCurrentLevel = (
+                (depth === 1 && options.showN1) ||
+                (depth === 2 && options.showN2) ||
+                (depth === 3 && options.showN3) ||
+                (depth === 4 && options.showApps)
+            );
+
+
+
+            const children = node.children
+                ?.map(child => applyDisplayOptions(child, options, depth + 1))
+                .filter((c): c is LevelNode => !!c);
+
+            const hasChildren = children && children.length > 0;
+
+            // Optionally filter out empty groups
+            if (!options.displayEmpty && !hasChildren && node.isGroup) {
+                return null;
+            }
+
+            if (showCurrentLevel) {
+                return {
+                    ...node,
+                    children: hasChildren ? children : undefined
+                };
+            } else if (hasChildren) {
+                // 👇 Bubble children up if current level is hidden
+                return children.length === 1
+                    ? children[0] // replace with single child directly
+                    : {
+                        ...node,
+                        isGroup: true,
+                        name: "", // optional placeholder
+                        id: `bubbled-${node.id}`,
+                        children
+                    };
+            }
+
+            return null;
+        }
+
+
+    function filterTree(node: LevelNode, filters: Filter, depth = 1): LevelNode | null {
+
+
+        const nameMatches =
+            (depth === 1 && filters.n1 === node.name) ||
+            (depth === 2 && filters.n2 === node.name) ||
+            (depth === 3 && filters.n3 === node.name) ||
+            (depth === 4 && filters.app === node.name);
+
+        // Recurse into children conditionally:
+        let filteredChildren: LevelNode[] | undefined;
+
+        if (node.children) {
+            // ✅ Only filter children if there's a deeper filter
+            const deeperFiltersExist =
+                (depth === 1 && (filters.n2 || filters.n3 || filters.app)) ||
+                (depth === 2 && (filters.n3 || filters.app)) ||
+                (depth === 3 && filters.app);
+
+            if (deeperFiltersExist || !nameMatches) {
+                filteredChildren = node.children
+                    .map(child => filterTree(child, filters, depth + 1))
+                    .filter((c): c is LevelNode => !!c);
+            } else if (nameMatches) {
+                // ✅ Node matched and no deeper filters → keep all children
+                filteredChildren = node.children;
+            }
+        }
+
+        const hasVisibleChildren = filteredChildren && filteredChildren.length > 0;
+
+        if (nameMatches || hasVisibleChildren) {
+            return {
+                ...node,
+                children: hasVisibleChildren ? filteredChildren : undefined
+            };
+        }
+
+        return null;
+    }
 
     function filterGroupedData(changedFilter: string) {
         switch (changedFilter) {
@@ -64,36 +150,35 @@
                 break;
         }
 
-        const filteredData: GroupLevel[] = data
-            .filter(n1g => !filters.n1 || n1g.levelName === filters.n1)
-            .map(n1g => ({
-            ...n1g,
-            groups: n1g.groups?.filter(n2g => !filters.n2 || n2g.levelName === filters.n2)
-                .map(n2g => ({
-                ...n2g,
-                groups: n2g.groups?.filter(n3g => !filters.n3 || n3g.levelName === filters.n3)
-                    .map(n3g => ({
-                        ...n3g,
-                        children: n3g.children?.filter(app => !filters.app || app.name === filters.app)
-                    }))
-                    .filter(n3g => n3g.children?.length ?? 0 > 0)
-                }))
-                .filter(n2g => n2g.groups?.length ?? 0 > 0)
-            }))
-            .filter(n1g => n1g.groups?.length ?? 0 > 0);
+        if(noFiltersApplied()) {
+            setFilteredData(Data);
+            return;
+        }
+
+
+
+        const isAnyFilterSet = filters.n1 || filters.n2 || filters.n3 || filters.app;
+
+        const filteredData: LevelNode[] = isAnyFilterSet
+            ? Data.map(n1g => filterTree(n1g, filters)).filter((n): n is LevelNode => !!n)
+            : Data;
+
+
+
 
         // Update the options for the filters based on the filtered data
-        onDataFitered(filteredData);
+        setFilteredData(filteredData);
 
         switch (changedFilter) {
             case 'n1':
                 console.log('n1', filters.n1, filteredData);
-                n2Options = [...new Set(filteredData.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
+                n2Options = [...new Set(filteredData.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
             case 'n2':
-                n3Options = [...new Set(filteredData.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName).filter((name): name is string => name !== undefined) ?? []) ?? []))];
+                n3Options = [...new Set(filteredData.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
             case 'n3':
-                appOptions = [...new Set(filteredData.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
-                    .filter((app): app is AppSoftware => app !== undefined);
+                appOptions = [...new Set(filteredData.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
+                    .filter((app) => !app?.isGroup)
+                    .filter(app => app !== undefined);
             case 'app':
                 break;
         }
@@ -102,38 +187,56 @@
     }
 
     function displayOptionsChanged(){
-        onDisplayChanged(displayOptions);
+        // Update the display options in the store
+        
+        const filteredData = Data.map(root => applyDisplayOptions(root, displayOptions))
+            .filter((n): n is LevelNode => !!n);
+
+        setFilteredData(filteredData);
+        
+    }
+
+    function onClearData(){
+        
+    }
+
+    function noFiltersApplied() {
+        return !filters.n1 && filters.n1.trim() === ''
+            && !filters.n2 && filters.n2.trim() === ''
+            && !filters.n3 && filters.n3.trim() === ''
+            && !filters.app && filters.app.trim() === '';
+    }
+
+    function resetOptions(){
+        n1Options = [...new Set(Data.map(n1g => n1g.name))];
+        n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
+        n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
+        appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
+            .filter(app => app !== undefined);
+
     }
 
 
-
     function updateFiltering(){
-        if(!filters.n1 && filters.n1.trim() === '' 
-            && !filters.n2 && filters.n2.trim() === '' 
-            && !filters.n3 && filters.n3.trim() === ''
-            && !filters.app && filters.app.trim() === '') {
-                n1Options = [...new Set(data.map(n1g => n1g.levelName))];
-                n2Options = [...new Set(data.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
-                n3Options = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName).filter((name): name is string => name !== undefined) ?? []) ?? []))];
-                appOptions = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
-                    .filter((app): app is AppSoftware => app !== undefined);
-                return;
+        if(noFiltersApplied()) {
+            resetOptions();
+            return;
         }
 
         if (filters.n1 && filters.n1.trim() !== '') {
-            n2Options = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName) ?? []))];
+            n2Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
         } else {
-            n2Options = [...new Set(data.flatMap(n1g => n1g.groups?.map(n2g => n2g.levelName).filter((name): name is string => name !== undefined)))] as string[];
+            n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name).filter((name): name is string => name !== undefined)))] as string[];
         }
         if (filters.n2 && filters.n2.trim() !== '') {
-            n3Options = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.filter(n2g => n2g.levelName === filters.n2).flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName))) )] as string[];
+            n3Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.map(n3g => n3g.name))) )] as string[];
         } else {
-            n3Options = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.map(n3g => n3g.levelName))))] as string[];
+            n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name))))] as string[];
         }
         if (filters.n3 && filters.n3.trim() !== '') {
-            appOptions = [...new Set(data.filter(n1g => n1g.levelName === filters.n1).flatMap(n1g => n1g.groups?.filter(n2g => n2g.levelName === filters.n2).flatMap(n2g => n2g.groups?.filter(n3g => n3g.levelName === filters.n3).flatMap(n3g => n3g.children))) )] as AppSoftware[];
+            appOptions = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.filter(n3g => n3g.name === filters.n3).flatMap(n3g => n3g.children))) )].filter(app => app !== undefined);
         } else {
-            appOptions = [...new Set(data.flatMap(n1g => n1g.groups?.flatMap(n2g => n2g.groups?.flatMap(n3g => n3g.children))))] as AppSoftware[];
+            appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children))))].filter(app => app !== undefined);
         }
     }
 
@@ -151,6 +254,7 @@
     onMount(() => {
         // Initialize the options for the filters based on the data
         updateFiltering();
+        setFilteredData(Data);
     });
 
 
