@@ -14,6 +14,25 @@
   
     let layoutNodes: d3.HierarchyRectangularNode<LevelNode>[] = $state([]);
         
+    function estimateSizeForRoot(root: LevelNode): [number, number] {
+        const maxDepth = getDepth(root);
+        const leafCount = countLeaves(root);
+
+        const width = Math.max(leafCount * 120, 300); // base width per leaf node
+        const height = Math.max(maxDepth * 80, 200);  // base height per level
+
+        return [width, height];
+    }
+
+    function getDepth(node: LevelNode, current = 1): number {
+        if (!node.children || node.children.length === 0) return current;
+        return Math.max(...node.children.map(child => getDepth(child, current + 1)));
+    }
+
+    function countLeaves(node: LevelNode): number {
+        if (!node.children || node.children.length === 0) return 1;
+        return node.children.reduce((acc, child) => acc + countLeaves(child), 0);
+    }
   
     function renderLayout() {
       const width = svgContainer.clientWidth || 5000;
@@ -31,15 +50,19 @@
         d3.hierarchy(node, d => d.children) as d3.HierarchyRectangularNode<LevelNode>
     );
 
-    const treemap = d3.treemap<LevelNode>()
-        .size([width, height])
-        .paddingInner(10)
-        .paddingOuter(10)
-        .paddingTop(LABEL_HEIGHT*1.3);
 
     let currentYOffset = 0;
 
     roots.forEach(root => {
+
+        const [w, h] = estimateSizeForRoot(root.data);
+
+        const treemap = d3.treemap<LevelNode>()
+            .size([w, h])
+            .paddingInner(10)
+            .paddingOuter(10)
+            .paddingTop(LABEL_HEIGHT * 1.3)
+            .round(true); // helps avoid subpixel jitter
         // Ensure empty leaves are visible
         root.eachBefore(node => {
             if (!node.children && node.value === 0) {
@@ -50,14 +73,12 @@
         root.sum(d => 1);
         treemap(root);
 
-        const rootHeight = root.y1 - root.y0;
-
         root.each(node => {
             node.y0 += currentYOffset;
             node.y1 += currentYOffset;
         });
 
-        currentYOffset += rootHeight + PADDING_BETWEEN_ROOTS;
+        currentYOffset += h + PADDING_BETWEEN_ROOTS;
     });
 
     return roots;

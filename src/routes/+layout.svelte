@@ -5,7 +5,7 @@
 
 </script>
 
-<main  class="container" >
+<main  class="container-fluid" >
     <div id="content">
       {@render children()}
     </div>
