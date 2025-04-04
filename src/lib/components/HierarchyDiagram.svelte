@@ -1,124 +1,24 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
     import NodeGroup from './NodeGroup.svelte';
     import type { LevelNode } from '$lib/types';
-    import { ConditionalFormattingRules, displayOptions, FilteredData } from '$lib/datastore.svelte';
+    import { ConditionalFormattingRules, DisplayOps, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getStyling, N2WIDTH, N3WIDTH } from '$lib/datastore.svelte';
+    import NLevelView from './NLevelView.svelte';
 
-
-    const LABEL_HEIGHT = 24;
-    const PADDING = 10;
 
   
     let svgContainer: SVGSVGElement;
     let groupContainer: SVGGElement;
   
-    let layoutNodes: d3.HierarchyRectangularNode<LevelNode>[] = $state([]);
 
-    const VERTICAL_ON_STACKING = 2; // Number of nodes to force vertical stacking
-        
-    function estimateSizeForRoot(root: LevelNode): [number, number] {
-        const maxDepth = getDepth(root);
-        const leafCount = countLeaves(root);
-
-        const width = Math.max(leafCount * 120, 500); // base width per leaf node
-        // if(root.isGroup && root.children && root.children.length > VERTICAL_ON_STACKING){
-        //     const verticalHeight = Math.max(maxDepth*root.children.length, 500); // base height per leaf node
-        //     return [width, verticalHeight];
-        // }
-        const height = Math.max(maxDepth, 150);  // base height per level
-
-
-
-        return [width, height];
-    }
-
-    function getDepth(node: LevelNode, current = 1): number {
-        if (!node.children || node.children.length === 0) return current;
-        return Math.max(...node.children.map(child => getDepth(child, current + 1)));
-    }
-
-    function countLeaves(node: LevelNode): number {
-        if (!node.children || node.children.length === 0) return 1;
-        return node.children.reduce((acc, child) => acc + countLeaves(child), 0);
-    }
-  
-    function renderLayout(renderData: LevelNode[]) {
-        layoutNodes = generateTreemapLayout(renderData); // Only take the first root for now
-    }
-
-    function getSum(node: LevelNode) {
-        if(!node.isGroup){
-            return LABEL_HEIGHT;
-        }
-
-        if(!node.children || node.children.length === 0) {
-            return LABEL_HEIGHT;
-        }
-
-        return 0;
-
-    }
-
-    function customTile(node: d3.HierarchyRectangularNode<LevelNode>, x0: number, y0: number, x1: number, y1: number) {
-        const childCount = node.children?.length || 0;
-        if (node.depth === 0 && childCount > VERTICAL_ON_STACKING) { // Force vertical stacking for N2
-            d3.treemapSlice(node, x0, y0, x1, y1);
-        } else {
-            d3.treemapBinary(node, x0, y0, x1, y1); // Horizontal for other levels
-        }
-    }
-
-    function generateTreemapLayout(
-        data: LevelNode[],
-    ): d3.HierarchyRectangularNode<LevelNode>[] {
-        const PADDING_BETWEEN_ROOTS = 20;
-
-        const roots = data.map(node =>
-            d3.hierarchy(node, d => d.children) as d3.HierarchyRectangularNode<LevelNode>
-        );
-
-
-        let currentYOffset = 0;
-
-        roots.forEach(root => {
-
-            const [w, h] = estimateSizeForRoot(root.data);
-
-            const treemap = d3.treemap<LevelNode>()
-                .size([w, h])
-                .paddingInner(PADDING)
-                .paddingOuter(PADDING)
-                .paddingTop(LABEL_HEIGHT * 1.3)
-                .round(true); // helps avoid subpixel jitter
-            
- 
-            root.sum(d => getSum(d));
-
-            treemap(root);
-
-
-            root.each(node => {
-                node.y0 += currentYOffset;
-                node.y1 += currentYOffset;
-            });
-
-            currentYOffset += h + PADDING_BETWEEN_ROOTS;
-        });
-
-        return roots;
-
-    }
 
     $effect(() => {
-        displayOptions;
+        DisplayOps;
         ConditionalFormattingRules;
-        renderLayout(FilteredData);
+
     });
 
-    export function reRender() {
-        renderLayout(FilteredData);
-    }
 
     onMount(() => {
       const svg = d3.select(svgContainer);
@@ -129,32 +29,109 @@
           .scaleExtent([0.5, 4])
           .on('zoom', ({ transform }) => g.attr('transform', transform))
       );
+        
+      FilterDataStore.subscribe(async (data) => {
+        if (data) {
+            await updateHeights();
+        }
+      });
+
+      DisplayOpsStore.subscribe(async (data) => {
+        if (data) {
+            await updateHeights();
+        }
+      });
 
     });
+
+    let heights: number[] = $state([]);
+    let refs: HTMLDivElement[] = $state([]);
+
+    async function updateHeights() {
+        await tick(); // wait for DOM
+
+        heights = refs.map(el => el?.scrollHeight || 0);
+    }
+
+    function getWidth(node: LevelNode) {
+        let multiplier = 1;
+        if(DisplayOps.showN1){
+            multiplier = N2WIDTH;
+        }else if(DisplayOps.showN2){
+            multiplier = N2WIDTH;
+        }else if(DisplayOps.showN3){
+            multiplier = N3WIDTH;
+        }else if(DisplayOps.showApps){
+            multiplier = N3WIDTH;
+        }
+
+        return Math.min(3,Math.round((node.children?.length || 0))) * multiplier;
+    }
 
 
 
   </script>
   
-  <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc" overflow="hidden">
-    <g bind:this={groupContainer} overflow="hidden">
-        {#if layoutNodes}
-        {#each layoutNodes as root}
-            {#each root.descendants() as node (node.data.id)}
-                {#if node.x1 - node.x0 > 1 && node.y1 - node.y0 > 1}
-                    <NodeGroup
-                        node={node.data}
-                        x={node.x0}
-                        y={node.y0}
-                        width={node.x1 - node.x0}
-                        height={node.y1 - node.y0}
-                        depth={node.depth}
-                    />
-                {/if}
+  <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
+    <g bind:this={groupContainer} >
+        {#each FilteredData as root, idx}
+        <foreignObject
+            x={0}
+            y={heights.slice(0, idx).reduce((sum, h) => sum + h + 20, 0)} 
+            width={getWidth(root) || 500}
+            height={heights[idx] || 500} >
+            <div bind:this={refs[idx]} style="width:100%; background-color: lightgray; padding:0.5rem;" >
 
-            {/each}
+                <NLevelView level={1} title={root.name} displayLevel={DisplayOps.showN1} gridChildren={true} nodeChildCount={root.children?.length || 0}>
+                    {#each (root.children || []) as n2Block}
+                      <NLevelView level={2} title={n2Block.name} displayLevel={DisplayOps.showN2} gridChildren={true} nodeChildCount={n2Block.children?.length || 0}>
+                        {#each (n2Block.children || []) as n3Block}
+                          <NLevelView level={3} title={n3Block.name} displayLevel={DisplayOps.showN3} gridChildren={true} nodeChildCount={n3Block.children?.length || 0}>
+                              {#each (n3Block.children || []) as app}
+                                <NLevelView level={4} isLeaf={true} styling={getStyling(app)} title={app} displayLevel={DisplayOps.showApps} addHeader={false}>
+                                      <div class="app-content">
+                                        <span>{app.name}</span>
+                                        <div>
+                                            {#each getConditionalRules(app) as rule}
+                                              <span class="formats" data-tooltip={`${rule.name} - ${rule.column}`} >{rule.styling.content ?? ''}</span>
+                                            {/each}
+                                        </div>
+                                      </div>
+     
+                                </NLevelView>
+                              {/each}
+                          </NLevelView>
+                        {/each}
+                      </NLevelView>
+                    {/each}
+                </NLevelView>
+            </div>
+            </foreignObject>
         {/each}
-        {/if}
     </g>
   </svg>
   
+
+  <style>
+
+    .app-content {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .app-content>span {
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+
+    .app-content>div {
+        float: right;
+    }
+
+    .app-content .formats {
+        border-bottom: unset;
+
+    }
+  </style>

@@ -1,9 +1,8 @@
 
 
 <script lang="ts">
+    import { APPWIDTH, N2WIDTH, N3WIDTH } from "$lib/datastore.svelte";
     import { onMount } from "svelte";
-
-
 
     let { 
         displayLevel, 
@@ -12,6 +11,8 @@
         gridChildren = false,
         addHeader = true,
         styling = '',
+        nodeChildCount = 0,
+        isLeaf = false,
         children } = $props();
 
     function getClassName() {
@@ -27,17 +28,32 @@
             default:
                 return '';
         }
-        
+    }
+
+
+    function getTemplateColumns() {
+        switch(level) {
+            case 1:
+                return `repeat(auto-fit, minmax(${N2WIDTH*0.8}px, 1fr))`;
+            case 2:
+                return `repeat(auto-fit, minmax(${N3WIDTH*0.8}px, 1fr))`;
+            case 3:
+                return `repeat(auto-fit, minmax(${APPWIDTH*0.8}px, 1fr))`;
+            case 4:
+                return `repeat(auto-fit, minmax(${APPWIDTH*0.8}px, 1fr))`;
+            default:
+                return '';
+        }
     }
 
     onMount(() => {
-        $inspect(displayLevel, 'displayOptions for NLevelView');
     });
 </script>
+<div style="{level === 4 ? '' : ''}" >
 
 {#if displayLevel}
-<article class={getClassName()} style={styling}>
-    {#if addHeader}
+<article class={getClassName()} style={styling} style:height={"100%"} data-haschildren={nodeChildCount>0}>
+    {#if addHeader && nodeChildCount > 0}
     <header>
         {#if level === 1}
             <h1>{title}</h1>
@@ -49,28 +65,54 @@
     </header>
     {/if}
 
-    {#if gridChildren}
-        <div class="grid">
+    {#if gridChildren && nodeChildCount > 0}
+        <div class="grid" data-level={level} style:grid-template-columns={getTemplateColumns()}>
             {@render children?.()}
         </div>
-    {:else}
+    {:else if nodeChildCount > 0 || isLeaf}
         {@render children?.()}
+    {:else}
+        {#if level === 1}
+            <h1>{title}</h1>
+        {:else if level === 2}
+            <h2>{title}</h2>
+        {:else if level === 3}
+            <h3>{title}</h3>
+        {/if}
     {/if}
 </article>
-
 {:else}
+<div data-haschildren={nodeChildCount>0}>
+    {#if gridChildren && nodeChildCount > 0}
+        <div class="grid" data-level={level} style:grid-template-columns={getTemplateColumns()}>
+            {@render children?.()}
+        </div>
+    {:else if nodeChildCount > 0 || isLeaf}
+        {@render children?.()}
+    {:else}
+    {#if displayLevel}
+        {#if level === 1}
+            <h1>{title}</h1>
+        {:else if level === 2}
+            <h2>{title}</h2>
+        {:else if level === 3}
+            <h3>{title}</h3>
+        {/if}
+        {/if}
 
-{@render children?.()}
+    {/if}
+</div>
 
 {/if}
+</div>
+
 
 
 <style>
+
+
 .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1rem;
-    width: 100%;
+    grid-template-rows: min-content;
 }
 
 

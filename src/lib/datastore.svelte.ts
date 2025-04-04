@@ -1,13 +1,28 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { ConditionalFormatting, DisplayOptions, LevelNode } from "./types";
+import { get, writable } from "svelte/store";
+
+// export const N1WIDTH = 1200;
+export const N2WIDTH = 1200;
+export const N3WIDTH = N2WIDTH * 0.3;
+export const APPWIDTH = N3WIDTH*0.8;
+
+
 
 export const Data: LevelNode[] = $state([]);
 
 export function setData(newData: LevelNode[]) {
-    Data.length = 0; // Clear the existing data
+    Data.splice(0, Data.length); // Clear existing data
     Data.push(...newData); // Add new data
     localStorage.setItem('groupedData', JSON.stringify(Data));
 }
+
+export function resetData() {
+    Data.splice(0, Data.length); // Clear existing data
+    localStorage.removeItem('groupedData'); // Remove from local storage
+    FilterDataStore.set([]); // Clear filtered data store
+}
+
 
 export function initData(): LevelNode[] {
     if (Data.length > 0) {
@@ -17,28 +32,36 @@ export function initData(): LevelNode[] {
     const saved = localStorage.getItem('groupedData');
     if (saved) {
         const parsed = JSON.parse(saved) as LevelNode[];
-        Data.push(...parsed);
+
+        setData(parsed); // Initialize DataStore with parsed data
+        setFilteredData(parsed); // Initialize FilterDataStore with parsed data
         return parsed;
     } else {
         return [];
     }
 }
 
+
+export const FilterDataStore = writable<LevelNode[]>([]);
+
+
 export const FilteredData: LevelNode[] = $state([]);
 
 export function setFilteredData(newData: LevelNode[]) {
-    console.log('Setting filtered data:', newData);
-    FilteredData.length = 0; // Clear the existing data
-    FilteredData.push(...newData); // Add new data
+    FilterDataStore.set(newData);
 }
 
-export function getFilteredData(): LevelNode[] {
-    if (FilteredData.length > 0) {
-        return FilteredData;
-    }
+FilterDataStore.subscribe((value) => {
+  if(value.length === 0) {
+    console.log('No filtered data available. Using original data.', value.length);
+    return;
+  }
+  
+  FilteredData.length = 0; // Clear the existing data
+  FilteredData.push(...value); // Add new data
+});  
 
-    return Data;
-}
+
 
 let columnHeaders: string[] = $state([]);
 export function getColumnHeaders() {
@@ -55,13 +78,28 @@ export function setColumnHeaders(newHeaders: string[]) {
     localStorage.setItem('columnHeaders', JSON.stringify(columnHeaders));
 }
 
-
-export let displayOptions: DisplayOptions = $state({
+export const DisplayOpsStore = writable<DisplayOptions>({
     showN1: true,
     showN2: true,
     showN3: true,
     showApps: true,
-    displayEmpty: false
+    displayEmpty: true
+});
+
+export const DisplayOps: DisplayOptions = $state({
+    showN1: true,
+    showN2: true,
+    showN3: true,
+    showApps: true,
+    displayEmpty: true
+});
+
+DisplayOpsStore.subscribe((value) => {
+  DisplayOps.showN1 = value.showN1;
+  DisplayOps.showN2 = value.showN2;
+  DisplayOps.showN3 = value.showN3;
+  DisplayOps.showApps = value.showApps;
+  DisplayOps.displayEmpty = value.displayEmpty;
 });
 
 export let DimensionMap = new SvelteMap<string, {height: number, width: number}>();
@@ -96,6 +134,7 @@ export function initConditionalFormattingRules(): Array<ConditionalFormatting> {
 
 export function getConditionalRules(node: LevelNode): ConditionalFormatting[] {
     const rules = ConditionalFormattingRules;
+
     if(node.metadata === undefined) {
         return [];
     }
@@ -147,6 +186,7 @@ export function getConditionalRules(node: LevelNode): ConditionalFormatting[] {
   }
 
  export function getStyling(app: LevelNode): string {
+    console.log('Getting styling for app:', app.name);
     const rules = getConditionalRules(app);
     if (rules.length === 0) {
       return '';
@@ -170,7 +210,12 @@ export function getConditionalRules(node: LevelNode): ConditionalFormatting[] {
       if (styling.textDecoration) {
         styleString += `text-decoration: ${styling.textDecoration};`;
       }
+      if (styling.borderColor.isSet) {
+        styleString += `border:4px solid ${styling.borderColor.color};`;
+      }
     }
+
+    console.log('Styling for app:', app.name, 'is', styleString);
 
     return styleString;
 }

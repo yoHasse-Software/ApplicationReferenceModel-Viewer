@@ -5,7 +5,7 @@
     import { type AppSoftware, type ConditionalFormatting, type RuleOperator, type DisplayOptions, type GroupLevel, type LevelNode } from '$lib/types';
     import ConditionalFormatDialogue from './ConditionalFormatDialogue.svelte';
     import HierarchyDiagram from './HierarchyDiagram.svelte';
-    import { Data, FilteredData, initData, setColumnHeaders, setData } from '$lib/datastore.svelte';
+    import { Data, FilteredData, initConditionalFormattingRules, initData, setColumnHeaders, setData } from '$lib/datastore.svelte';
  
     // Example grouped data based on your CSV
     let filteredData: GroupLevel[] = $state([]);
@@ -122,6 +122,8 @@
 
         showColumnSelector = false;
 
+        location.reload(); // Reload the page to apply changes
+
     }
 
 
@@ -179,6 +181,7 @@
                     groupChildren.push(appNode);
                     nodeMap.set(appNode.id, appNode);
                 }
+
             }
 
             // Add nested groups
@@ -206,43 +209,89 @@
         return rootNode;
     }
 
+    function sortAndMarkLeafEmpty(node: LevelNode, depth = 1): [LevelNode, boolean] {
+        const indent = '  '.repeat(depth - 1);
+        console.log(`${indent}🟦 Visiting: ${node.name} (children: ${node.children?.length ?? 0})`);
+
+        if(!node.isGroup) {
+            console.log(`${indent}🔹 Leaf node → ${node.name}`)
+            return [node, false]; // Leaf node = not empty
+        }
+
+        if (!node.children || node.children.length === 0) {
+            console.log(`${indent}🔹 Leaf node → EMPTY`);
+            return [node, true]; // Leaf with no children = empty
+        }
+
+        let allLeafsEmpty = true;
+
+        // Process and sort children
+        const sortedWithFlags = node.children.map(child => {
+            const [processedChild, isEmpty] = sortAndMarkLeafEmpty(child, depth + 1);
+
+            if (!isEmpty) {
+                allLeafsEmpty = false;
+            }
+
+            return [processedChild, isEmpty] as [LevelNode, boolean];
+        });
+
+        sortedWithFlags.forEach(([child, isEmpty]) => {
+            console.log(`${indent}↪ ${child.name} is ${isEmpty ? 'EMPTY' : 'FULL'}`);
+        });
+
+        // Sort: full nodes before empty ones
+        sortedWithFlags.sort((a, b) => {
+            return a[1] === b[1] ? 0 : a[1] ? 1 : -1;
+        });
+
+        node.children = sortedWithFlags.map(([child]) => child);
+
+        console.log(`${indent}⬅️ ${node.name} is ${allLeafsEmpty ? 'EMPTY' : 'FULL'} after sorting`);
+        return [node, allLeafsEmpty];
+        }
+
     function generateNodeTree(groups: GroupLevel[]): LevelNode[] {
         const nodes: LevelNode[] = [];
         for (const group of groups) {
             const groupNode = convertToNodeIterative(group);
             nodes.push(groupNode);
         }
-        return nodes;
+        return nodes.map(n => sortAndMarkLeafEmpty(n)[0]);
     }
 
     function closeFormatDialogue(){
         isConditionalFormatingDialogueOpen = false;
         // reload the page
-        location.reload();
+        // location.reload();
     }
 
-    let hierarchyDiagram: HierarchyDiagram;
 
     onMount(() => {
         initData();
+        initConditionalFormattingRules();
+
+        
 
     });
   </script>
 
-  <ConditionalFormatDialogue 
-    isOpen={isConditionalFormatingDialogueOpen}
-    columnHeaders={columnHeaders}
-    onClose={() => closeFormatDialogue()} />
 
-  
-  <Sidebar 
-    bind:this={sideBarComponent}
-    onConditionalFormatDialogueOpen={() => isConditionalFormatingDialogueOpen = true} />
+
+    
 
 
   {#if FilteredData.length === 0}
+
     {#if !showColumnSelector}
-    <input type="file" accept=".xlsx" onchange={handleFile} />
+    <main>
+        <article>
+            <header>
+                <span><strong>Select data to start</strong></span>
+            </header>
+            <input style="margin:auto" type="file" accept=".xlsx" onchange={handleFile} />
+        </article>
+    </main>
     {:else}
     <div>
         <h3>Select Columns</h3>
@@ -289,14 +338,33 @@
   {/if}
 
   {#if FilteredData.length > 0}
+
+    <ConditionalFormatDialogue 
+    isOpen={isConditionalFormatingDialogueOpen}
+    onClose={() => closeFormatDialogue()} />
+
+
+    <Sidebar 
+    bind:this={sideBarComponent}
+    onConditionalFormatDialogueOpen={() => isConditionalFormatingDialogueOpen = true} />
+    
     <h1>Tillämpningsarkitekturen</h1>
+    <HierarchyDiagram  />
   {/if}
 
-  <HierarchyDiagram bind:this={hierarchyDiagram} />
 
 <style>
   span[data-tooltip]{
     border-bottom: unset;
   }
+
+  main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+    }
   
 </style>

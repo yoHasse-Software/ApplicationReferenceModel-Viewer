@@ -1,3 +1,5 @@
+import type { color } from "d3";
+
 export type AppSoftware = {
     name: string;
     metadata: {
@@ -45,6 +47,10 @@ export type ConditionalFormatting = {
             color?: string = '#000000';
         };
         color: {
+            isSet: boolean;
+            color?: string = '#000000';
+        };
+        borderColor: {
             isSet: boolean;
             color?: string = '#000000';
         };

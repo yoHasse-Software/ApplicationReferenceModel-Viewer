@@ -1,11 +1,10 @@
 
 <script lang="ts">
-    import { ConditionalFormattingRules, initConditionalFormattingRules, saveConditionalFormattingRulesToStorage } from "$lib/datastore.svelte";
+    import { ConditionalFormattingRules, getColumnHeaders, initConditionalFormattingRules, saveConditionalFormattingRulesToStorage } from "$lib/datastore.svelte";
     import type { ConditionalFormatting, RuleOperator } from "$lib/types";
     import { onMount } from "svelte";
 
     const { 
-        columnHeaders,
         isOpen,
         onClose,
      } = $props();
@@ -13,6 +12,7 @@
     
     let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
 
+    let columnHeaders: string[] = $state([]);
 
     const RuleOperatoruleOptions: RuleOperator[] = [
         'equals',
@@ -36,7 +36,8 @@
         const hasStylingValues = (
             !!rule.styling?.content?.trim() || 
             !!rule.styling?.color?.isSet ||
-            !!rule.styling?.backgroundColor?.isSet);
+            !!rule.styling?.backgroundColor?.isSet ||
+            !!rule.styling?.borderColor?.isSet);
 
         const textStylesAreDefault = 
             (rule.styling?.textDecoration === 'none' 
@@ -74,7 +75,7 @@
 
 
     onMount(() => {
-        initConditionalFormattingRules()
+        columnHeaders = getColumnHeaders();
     });
 
 </script>
@@ -188,6 +189,23 @@
                                     <em>Changes the background color when rule is applied</em>
                                 </small>
                             </label>
+                            <label>
+                                Border Color:
+                                {#if rule.styling.borderColor.isSet}
+                                <div role="group">
+                                    <input type="color" bind:value={rule.styling.borderColor.color} aria-label="Border color picker" />
+                                    <button onclick={() =>  setTimeout(() => rule.styling.borderColor.isSet = false, 0)} >Clear</button>
+                                </div>
+                                {:else}
+                                <div>
+                                    <button onclick={() => rule.styling.borderColor.isSet = true} class="secondary" style="width: 100%;">Pick Color</button>
+                                </div>
+                                {/if}
+                                <small >
+                                    <em>Changes the border color when rule is applied</em>
+                                </small>
+
+                            </label>
                         </fieldset>
                     </details>
 
@@ -269,6 +287,10 @@
                             color: '#ffffff',
                         },
                         color: {
+                            isSet: false,
+                            color: '#000000',
+                        },
+                        borderColor: {
                             isSet: false,
                             color: '#000000',
                         },

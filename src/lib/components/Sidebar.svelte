@@ -1,7 +1,7 @@
 
 <script lang="ts">
-    import { Data, setFilteredData } from "$lib/datastore.svelte";
-    import type { DisplayOptions, LevelNode } from "$lib/types";
+    import { Data, setFilteredData, setData, resetData, DisplayOpsStore, DisplayOps } from "$lib/datastore.svelte";
+    import { type DisplayOptions, type LevelNode } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
 
@@ -31,12 +31,12 @@
         app: ''
     });
 
-    let displayOptions: DisplayOptions = $state({
+    let displayOps = $state<DisplayOptions>({
+        displayEmpty: true,
         showN1: true,
         showN2: true,
         showN3: true,
-        showApps: true,
-        displayEmpty: true
+        showApps: true
     });
 
     let n1Options = $state([]) as string[];
@@ -45,67 +45,40 @@
     let appOptions = $state([]) as LevelNode[];
 
     // Populate the options for the filters based on the data
+    function filterChildrenRecursively(node: LevelNode): LevelNode | undefined {
+        // ✅ If it's a leaf (not a group), keep it
+        if (!node.isGroup) return node;
 
-    function applyDisplayOptions(
-            node: LevelNode,
-            options: DisplayOptions,
-            depth = 1
-        ): LevelNode | null {
-            const showCurrentLevel = (
-                (depth === 1 && options.showN1) ||
-                (depth === 2 && options.showN2) ||
-                (depth === 3 && options.showN3) ||
-                (depth === 4 && options.showApps)
-            );
+        // ✅ If it's a group but has no children → discard it
+        if (!node.children || node.children.length === 0) return undefined;
 
+        // ✅ Recursively filter children
+        const filteredChildren = node.children
+            .map(filterChildrenRecursively)
+            .filter((n): n is LevelNode => !!n); // filter out nulls
 
+        // ❌ If none of the children survive, discard this node too
+        if (filteredChildren.length === 0) return undefined;
 
-            const children = node.children
-                ?.map(child => applyDisplayOptions(child, options, depth + 1))
-                .filter((c): c is LevelNode => !!c);
-
-            const hasChildren = children && children.length > 0;
-
-            // Optionally filter out empty groups
-            if (!options.displayEmpty && !hasChildren && node.isGroup) {
-                return null;
-            }
-
-            if (showCurrentLevel) {
-                return {
-                    ...node,
-                    children: hasChildren ? children : undefined
-                };
-            } else if (hasChildren) {
-                // 👇 Bubble children up if current level is hidden
-                return children.length === 1
-                    ? children[0] // replace with single child directly
-                    : {
-                        ...node,
-                        isGroup: true,
-                        name: "", // optional placeholder
-                        id: `bubbled-${node.id}`,
-                        children
-                    };
-            }
-
-            return null;
-        }
+        // ✅ Keep the node, with pruned children
+        return {
+            ...node,
+            children: filteredChildren
+        };
+    }
 
 
-    function filterTree(node: LevelNode, filters: Filter, depth = 1): LevelNode | null {
-
-
+    function filterTree(rootNode: LevelNode, filters: Filter, depth = 1): LevelNode | null {
         const nameMatches =
-            (depth === 1 && filters.n1 === node.name) ||
-            (depth === 2 && filters.n2 === node.name) ||
-            (depth === 3 && filters.n3 === node.name) ||
-            (depth === 4 && filters.app === node.name);
+            (depth === 1 && filters.n1 === rootNode.name) ||
+            (depth === 2 && filters.n2 === rootNode.name) ||
+            (depth === 3 && filters.n3 === rootNode.name) ||
+            (depth === 4 && filters.app === rootNode.name);
 
         // Recurse into children conditionally:
         let filteredChildren: LevelNode[] | undefined;
 
-        if (node.children) {
+        if (rootNode.children) {
             // ✅ Only filter children if there's a deeper filter
             const deeperFiltersExist =
                 (depth === 1 && (filters.n2 || filters.n3 || filters.app)) ||
@@ -113,12 +86,12 @@
                 (depth === 3 && filters.app);
 
             if (deeperFiltersExist || !nameMatches) {
-                filteredChildren = node.children
+                filteredChildren = rootNode.children
                     .map(child => filterTree(child, filters, depth + 1))
                     .filter((c): c is LevelNode => !!c);
             } else if (nameMatches) {
                 // ✅ Node matched and no deeper filters → keep all children
-                filteredChildren = node.children;
+                filteredChildren = rootNode.children;
             }
         }
 
@@ -126,7 +99,7 @@
 
         if (nameMatches || hasVisibleChildren) {
             return {
-                ...node,
+                ...rootNode,
                 children: hasVisibleChildren ? filteredChildren : undefined
             };
         }
@@ -151,6 +124,11 @@
         }
 
         if(noFiltersApplied()) {
+            if(!displayOps.displayEmpty){
+                console.log('displayEmpty', Data.length);
+                setFilteredData(Data.map(n1g => filterChildrenRecursively(n1g)).filter((n): n is LevelNode => !!n));
+                return;
+            }
             setFilteredData(Data);
             return;
         }
@@ -160,13 +138,15 @@
         const isAnyFilterSet = filters.n1 || filters.n2 || filters.n3 || filters.app;
 
         const filteredData: LevelNode[] = isAnyFilterSet
-            ? Data.map(n1g => filterTree(n1g, filters)).filter((n): n is LevelNode => !!n)
+            ? Data.map(n1g => filterTree(n1g, filters))
+                .filter((n): n is LevelNode => !!n)
             : Data;
 
 
 
 
         // Update the options for the filters based on the filtered data
+        console.log('filteredData', filteredData);
         setFilteredData(filteredData);
 
         switch (changedFilter) {
@@ -186,18 +166,22 @@
 
     }
 
-    function displayOptionsChanged(){
-        // Update the display options in the store
+    function DisplayOpsChanged(){
+        console.log('DisplayOpsChanged', displayOps);
+        console.log('DisplayOps', DisplayOps);
+        if(DisplayOps.displayEmpty !== displayOps.displayEmpty) {
+            filterGroupedData('n1');
+        }
         
-        const filteredData = Data.map(root => applyDisplayOptions(root, displayOptions))
-            .filter((n): n is LevelNode => !!n);
+        DisplayOpsStore.set(displayOps);
 
-        setFilteredData(filteredData);
-        
     }
 
+
+
     function onClearData(){
-        
+        resetData();
+        location.reload();
     }
 
     function noFiltersApplied() {
@@ -254,7 +238,6 @@
     onMount(() => {
         // Initialize the options for the filters based on the data
         updateFiltering();
-        setFilteredData(Data);
     });
 
 
@@ -329,8 +312,7 @@
                     <li>
                         <label>
                             <input type="checkbox" role="switch" 
-                                bind:checked={displayOptions.displayEmpty} 
-                                onchange={displayOptionsChanged}  /> Display Empty levels
+                                bind:checked={displayOps.displayEmpty} onchange={DisplayOpsChanged}  /> Display Empty levels
 
                         </label>
                         <small >
@@ -339,22 +321,22 @@
                     </li>
                     <li>
                         <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOptions.showN1} onchange={displayOptionsChanged} /> Show N1
+                            <input type="checkbox" role="switch" bind:checked={displayOps.showN1} onchange={DisplayOpsChanged} /> Show N1
                         </label>
                     </li>
                     <li>
                         <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOptions.showN2} onchange={displayOptionsChanged}  /> Show N2
+                            <input type="checkbox" role="switch" bind:checked={displayOps.showN2} onchange={DisplayOpsChanged}  /> Show N2
                         </label>
                     </li>
                     <li>
                         <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOptions.showN3} onchange={displayOptionsChanged}  /> Show N3
+                            <input type="checkbox" role="switch" bind:checked={displayOps.showN3} onchange={DisplayOpsChanged}  /> Show N3
                         </label>
                     </li>
                     <li>
                         <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOptions.showApps} onchange={displayOptionsChanged}  /> Show App
+                            <input type="checkbox" role="switch" bind:checked={displayOps.showApps} onchange={DisplayOpsChanged}  /> Show App
                         </label>
                     </li>
                 </ul>

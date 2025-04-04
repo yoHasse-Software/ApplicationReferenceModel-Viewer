@@ -19,7 +19,7 @@
 
 }
 
-.n3-box>header {
+.n3-box>header,.n3-box[data-haschildren="false"] {
   background-color: var(--pico-secondary);
 }
 
@@ -27,12 +27,11 @@
   border: 1px solid var(--pico-secondary);
 }
 
-.n3-box>header h3 {
+.n3-box>header h3, .n3-box[data-haschildren="false"]>h3 {
   color: var(--pico-contrast-inverse);
 }
 
 .app {
-  border: 1px dotted var(--pico-primary);
   background-color: var(--pico-primary);
   color: var(--pico-contrast-inverse);
   display: flex;

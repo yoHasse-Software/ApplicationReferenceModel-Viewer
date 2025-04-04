@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { displayOptions, getConditionalRules, getStylingFromRules } from "$lib/datastore.svelte";
+    import { getConditionalRules, getStylingFromRules } from "$lib/datastore.svelte";
     import type { LevelNode } from "$lib/types";
     import { onMount } from "svelte";
 
@@ -40,6 +40,27 @@
 
 {#if displayThis}
 
+<!-- <foreignObject x={x} y={y} width={width} height={400}>
+  <article>
+    <header>
+      {#if depth === 0}
+        <h1>{node.name} {extraContent}</h1>
+      {:else if depth === 1}
+        <h2>{node.name} {extraContent}</h2>
+      {:else if depth === 2}
+        <h3>{node.name} {extraContent}</h3>
+      {:else if depth === 3}
+        <h4>{node.name} {extraContent}</h4>
+      {/if}
+    </header>
+
+    <div class="content" style={styleString}>
+
+    </div>
+  </article>
+
+</foreignObject> -->
+
 <g transform={`translate(${x}, ${y})`} >
   <rect
     data-depth={depth}
@@ -57,6 +78,7 @@
     <text data-depth={depth} x="8" y={LABEL_HEIGHT / 2 + 4} font-size="12" font-weight="bold" >
         {node.name} {extraContent}
     </text>
+    
   {/if}
 
 </g>
