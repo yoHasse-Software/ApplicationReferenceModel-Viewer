@@ -138,6 +138,8 @@
             value: 0,
             name: root.levelName,
             isGroup: true,
+            
+            spacedata: {},
         };
         nodeMap.set(rootId, rootNode);
 
@@ -159,6 +161,8 @@
                 name: group.levelName,
                 parent: parentId,
                 isGroup: true,
+                spacedata: {},
+
             };
 
             // Store back in case it wasn't yet
@@ -177,6 +181,8 @@
                         parent: currentId,
                         isGroup: false,
                         metadata: app.metadata,
+                        spacedata: {},
+
                     };
                     groupChildren.push(appNode);
                     nodeMap.set(appNode.id, appNode);
@@ -194,6 +200,8 @@
                         name: subgroup.levelName,
                         parent: currentId,
                         isGroup: true,
+                        spacedata: {},
+
                     };
                     nodeMap.set(subgroupId, subgroupNode);
                     groupChildren.push(subgroupNode);
@@ -249,12 +257,22 @@
 
         console.log(`${indent}⬅️ ${node.name} is ${allLeafsEmpty ? 'EMPTY' : 'FULL'} after sorting`);
         return [node, allLeafsEmpty];
+    }
+
+    function assignValuesIterative(node: LevelNode, value: number) {
+        node.value = value;
+        if (node.children) {
+            for (const child of node.children) {
+                assignValuesIterative(child, value+1);
+            }
         }
+    }
 
     function generateNodeTree(groups: GroupLevel[]): LevelNode[] {
         const nodes: LevelNode[] = [];
         for (const group of groups) {
             const groupNode = convertToNodeIterative(group);
+            assignValuesIterative(groupNode, 0);
             nodes.push(groupNode);
         }
         return nodes.map(n => sortAndMarkLeafEmpty(n)[0]);

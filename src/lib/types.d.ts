@@ -28,6 +28,13 @@ export type LevelNode = {
     metadata?: {
         [key: string]: string | number | boolean;
     };
+
+    spacedata:{
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+    };
 }
 
 

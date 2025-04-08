@@ -75,29 +75,19 @@
   <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
     <g bind:this={groupContainer} >
         {#each FilteredData as root, idx}
-        <foreignObject
+        <g
             x={0}
             y={heights.slice(0, idx).reduce((sum, h) => sum + h + 20, 0)} 
             width={getWidth(root) || 500}
-            height={heights[idx] || 500} >
-            <div bind:this={refs[idx]} style="width:100%; background-color: lightgray; padding:0.5rem;" >
-
-                <NLevelView level={1} title={root.name} displayLevel={DisplayOps.showN1} gridChildren={true} nodeChildCount={root.children?.length || 0}>
+            height={5000} >
+                <NLevelView level={1} node={root} title={root.name} displayLevel={DisplayOps.showN1} gridChildren={true} nodeChildCount={root.children?.length || 0}>
                     {#each (root.children || []) as n2Block}
-                      <NLevelView level={2} title={n2Block.name} displayLevel={DisplayOps.showN2} gridChildren={true} nodeChildCount={n2Block.children?.length || 0}>
+                      <NLevelView level={2} node={n2Block} title={n2Block.name} displayLevel={DisplayOps.showN2} gridChildren={true} nodeChildCount={n2Block.children?.length || 0}>
                         {#each (n2Block.children || []) as n3Block}
-                          <NLevelView level={3} title={n3Block.name} displayLevel={DisplayOps.showN3} gridChildren={true} nodeChildCount={n3Block.children?.length || 0}>
+                          <NLevelView level={3} node={n3Block} title={n3Block.name} displayLevel={DisplayOps.showN3} gridChildren={true} nodeChildCount={n3Block.children?.length || 0}>
                               {#each (n3Block.children || []) as app}
-                                <NLevelView level={4} isLeaf={true} styling={getStyling(app)} title={app} displayLevel={DisplayOps.showApps} addHeader={false}>
-                                      <div class="app-content">
-                                        <span>{app.name}</span>
-                                        <div>
-                                            {#each getConditionalRules(app) as rule}
-                                              <span class="formats" data-tooltip={`${rule.name} - ${rule.column}`} >{rule.styling.content ?? ''}</span>
-                                            {/each}
-                                        </div>
-                                      </div>
-     
+                                <NLevelView level={4} node={app} isLeaf={true} styling={getStyling(app)} title={app} displayLevel={DisplayOps.showApps} addHeader={false}>
+                                        <text>{app.name}</text>
                                 </NLevelView>
                               {/each}
                           </NLevelView>
@@ -105,8 +95,7 @@
                       </NLevelView>
                     {/each}
                 </NLevelView>
-            </div>
-            </foreignObject>
+              </g>
         {/each}
     </g>
   </svg>

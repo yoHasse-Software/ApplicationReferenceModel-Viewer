@@ -6,6 +6,7 @@ import { get, writable } from "svelte/store";
 export const N2WIDTH = 1200;
 export const N3WIDTH = N2WIDTH * 0.3;
 export const APPWIDTH = N3WIDTH*0.8;
+export const LABEL_HEIGHT = 24;
 
 
 
@@ -32,6 +33,8 @@ export function initData(): LevelNode[] {
     const saved = localStorage.getItem('groupedData');
     if (saved) {
         const parsed = JSON.parse(saved) as LevelNode[];
+
+
 
         setData(parsed); // Initialize DataStore with parsed data
         setFilteredData(parsed); // Initialize FilterDataStore with parsed data
@@ -186,7 +189,6 @@ export function getConditionalRules(node: LevelNode): ConditionalFormatting[] {
   }
 
  export function getStyling(app: LevelNode): string {
-    console.log('Getting styling for app:', app.name);
     const rules = getConditionalRules(app);
     if (rules.length === 0) {
       return '';

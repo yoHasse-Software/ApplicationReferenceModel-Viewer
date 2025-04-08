@@ -1,10 +1,14 @@
 
 
 <script lang="ts">
-    import { APPWIDTH, N2WIDTH, N3WIDTH } from "$lib/datastore.svelte";
+    import { APPWIDTH, LABEL_HEIGHT, N2WIDTH, N3WIDTH } from "$lib/datastore.svelte";
     import { onMount } from "svelte";
+    import AppMap from "./AppMap.svelte";
+
+
 
     let { 
+        node,
         displayLevel, 
         level,
         title,
@@ -14,6 +18,24 @@
         nodeChildCount = 0,
         isLeaf = false,
         children } = $props();
+
+
+    const colors = ['#dfe6e9', '#b2bec3', '#636e72', '#00b894', '#0984e3', '#d63031', '#fdcb6e', '#00b894', '#6c5ce7'];
+    const color = colors[node?.value || 0] || colors[0];
+
+
+    const getRectWidth = () => {
+        switch(node.value){
+            case 0:
+                return N2WIDTH * 5;
+            case 1:
+                return N2WIDTH;
+            case 2:
+                return N3WIDTH;
+            case 3:
+                return APPWIDTH;
+        }
+    };
 
     function getClassName() {
         switch(level) {
@@ -49,71 +71,30 @@
     onMount(() => {
     });
 </script>
-<div style="{level === 4 ? '' : ''}" >
 
-{#if displayLevel}
-<article class={getClassName()} style={styling} style:height={"100%"} data-haschildren={nodeChildCount>0}>
-    {#if addHeader && nodeChildCount > 0}
-    <header>
-        {#if level === 1}
-            <h1>{title}</h1>
-        {:else if level === 2}
-            <h2>{title}</h2>
-        {:else if level === 3}
-            <h3>{title}</h3>
-        {/if}
-    </header>
-    {/if}
+<g>
+    <rect
+        data-depth={node?.value}
+        width={getRectWidth()}
+        height={LABEL_HEIGHT}
+        stroke-width="1"
+        rx="4"
+    />
+  <text>
+    {node?.value ?? "NOT DEFINED"}
+    </text>
 
-    {#if gridChildren && nodeChildCount > 0}
-        <div class="grid" data-level={level} style:grid-template-columns={getTemplateColumns()}>
-            {@render children?.()}
-        </div>
-    {:else if nodeChildCount > 0 || isLeaf}
-        {@render children?.()}
-    {:else}
-        {#if level === 1}
-            <h1>{title}</h1>
-        {:else if level === 2}
-            <h2>{title}</h2>
-        {:else if level === 3}
-            <h3>{title}</h3>
-        {/if}
-    {/if}
-</article>
-{:else}
-<div data-haschildren={nodeChildCount>0}>
-    {#if gridChildren && nodeChildCount > 0}
-        <div class="grid" data-level={level} style:grid-template-columns={getTemplateColumns()}>
-            {@render children?.()}
-        </div>
-    {:else if nodeChildCount > 0 || isLeaf}
-        {@render children?.()}
-    {:else}
-    {#if displayLevel}
-        {#if level === 1}
-            <h1>{title}</h1>
-        {:else if level === 2}
-            <h2>{title}</h2>
-        {:else if level === 3}
-            <h3>{title}</h3>
-        {/if}
-        {/if}
+  {@render children?.()}
+</g>
 
-    {/if}
-</div>
 
-{/if}
-</div>
+
 
 
 
 <style>
 
 
-.grid {
-    grid-template-rows: min-content;
-}
 
 
 </style>
