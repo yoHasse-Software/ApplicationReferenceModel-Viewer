@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
-    import NodeGroup from './NodeGroup.svelte';
     import type { LevelNode } from '$lib/types';
     import { ConditionalFormattingRules, DisplayOps, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getStyling, N2WIDTH, N3WIDTH } from '$lib/datastore.svelte';
     import NLevelView from './NLevelView.svelte';

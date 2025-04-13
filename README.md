@@ -112,3 +112,9 @@ Get-Content .\db\jsonImport.cypher | docker exec -i neo4j cypher-shell -u neo4j 
 
 
 db\content\architecture.json
+
+
+
+// TODO: PostgreSQL
+
+https://age.apache.org/getstarted/quickstart/

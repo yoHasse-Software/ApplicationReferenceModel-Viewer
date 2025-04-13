@@ -68,13 +68,9 @@ RETURN {
   children: groups,
   metadata: area { .* }
 } AS tree
-
-         `);
-
+`);
 
         const rawTrees = result.records.map(record => record.get('tree'));
-
-        console.log('Raw trees:', rawTrees); // Log the raw trees for debugging
         return rawTrees.map(root => mapToLevelNode(root));
     } catch (error) {
         console.error('Error fetching data from Neo4j:', error);

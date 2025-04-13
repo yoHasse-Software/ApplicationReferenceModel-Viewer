@@ -8,11 +8,11 @@ import { getAsTreeAsync } from '$lib/server/dataFetch';
 
 
 export const load: PageServerLoad = async () => {
-  const data = await getAsTreeAsync();
+  // const data = await getAsTreeAsync();
 
-  return {
-    nodeTree: data
-  };
+  // return {
+  //   nodeTree: data
+  // };
 };
 
 

@@ -6425,8 +6425,8 @@
       "name": "Verksamhetsnära bastjänster (Affärssystem)",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "1",
-        "beskrivning": "Innehåller bland annat Ekonomi, HR, Ledningsstöd\n2020-09-02: Bytt namn från Affär\n2021-04-29: Bytt namn från Affärssystem\n2021-11-10: Byta namn till Administrativa bastjänster?"
+        "beskrivning": "Innehåller bland annat Ekonomi, HR, Ledningsstöd\n2020-09-02: Bytt namn från Affär\n2021-04-29: Bytt namn från Affärssystem\n2021-11-10: Byta namn till Administrativa bastjänster?",
+        "ext_id": "1"
       }
     },
     {
@@ -6434,7 +6434,7 @@
       "name": "Bibliotek",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "2"
+        "ext_id": "2"
       }
     },
     {
@@ -6442,7 +6442,7 @@
       "name": "Utbildning",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "3"
+        "ext_id": "3"
       }
     },
     {
@@ -6450,8 +6450,8 @@
       "name": "Forskning",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "4",
-        "beskrivning": "Tidigare Forskningsstöd"
+        "beskrivning": "Tidigare Forskningsstöd",
+        "ext_id": "4"
       }
     },
     {
@@ -6459,8 +6459,8 @@
       "name": "Kommunikation och samarbete",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "5",
-        "beskrivning": "Tidigare Kommunikation"
+        "beskrivning": "Tidigare Kommunikation",
+        "ext_id": "5"
       }
     },
     {
@@ -6468,8 +6468,8 @@
       "name": "Anläggning och miljö",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "6",
-        "beskrivning": "2023-04-13: Bytt namn från Tidigare Fastighet och miljö\nTidigare Fastighet och lokal"
+        "beskrivning": "2023-04-13: Bytt namn från Tidigare Fastighet och miljö\nTidigare Fastighet och lokal",
+        "ext_id": "6"
       }
     },
     {
@@ -6477,8 +6477,8 @@
       "name": "Grundläggande IT-komponenter",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "7",
-        "beskrivning": "2020-09-02: Bytt namn från Infrastruktur\n2021-04-29: Bytt namn från IT-realisering\n2023-04-13: Bytt namn från Tekniska bastjänster"
+        "beskrivning": "2020-09-02: Bytt namn från Infrastruktur\n2021-04-29: Bytt namn från IT-realisering\n2023-04-13: Bytt namn från Tekniska bastjänster",
+        "ext_id": "7"
       }
     },
     {
@@ -6486,8 +6486,8 @@
       "name": "Myndighet",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "8",
-        "beskrivning": "E-arkiv, Diarie m.m."
+        "beskrivning": "E-arkiv, Diarie m.m.",
+        "ext_id": "8"
       }
     },
     {
@@ -6495,7 +6495,7 @@
       "name": "Service och support",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "9"
+        "ext_id": "9"
       }
     },
     {
@@ -6503,7 +6503,7 @@
       "name": "Applikationsnära infrastruktur",
       "label": "ApplicationArea",
       "metadata": {
-        "id": "10"
+        "ext_id": "10"
       }
     },
     {
@@ -6511,8 +6511,8 @@
       "name": "Utbildningsgenomförande",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "4",
-        "parentid": "area_3"
+        "parentid": "area_3",
+        "ext_id": "4"
       }
     },
     {
@@ -6520,9 +6520,9 @@
       "name": "Planering och administration",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "6",
         "beskrivning": "2023-04-13: Bytt namn från Studieadministration",
-        "parentid": "area_3"
+        "parentid": "area_3",
+        "ext_id": "6"
       }
     },
     {
@@ -6530,8 +6530,8 @@
       "name": "Kommunikation",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "8",
-        "parentid": "area_5"
+        "parentid": "area_5",
+        "ext_id": "8"
       }
     },
     {
@@ -6539,8 +6539,8 @@
       "name": "Samarbete",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "12",
-        "parentid": "area_5"
+        "parentid": "area_5",
+        "ext_id": "12"
       }
     },
     {
@@ -6548,9 +6548,9 @@
       "name": "Fastighet",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "13",
         "beskrivning": "2023-04-13: Bytt namn från Fastighet och lokalhantering",
-        "parentid": "area_6"
+        "parentid": "area_6",
+        "ext_id": "13"
       }
     },
     {
@@ -6558,8 +6558,8 @@
       "name": "Identitets- och behörighetshantering",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "16",
-        "parentid": "area_7"
+        "parentid": "area_7",
+        "ext_id": "16"
       }
     },
     {
@@ -6567,8 +6567,8 @@
       "name": "Arkiv",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "19",
-        "parentid": "area_8"
+        "parentid": "area_8",
+        "ext_id": "19"
       }
     },
     {
@@ -6576,8 +6576,8 @@
       "name": "Myndighetsutövning",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "20",
-        "parentid": "area_8"
+        "parentid": "area_8",
+        "ext_id": "20"
       }
     },
     {
@@ -6585,8 +6585,8 @@
       "name": "Ekonomi",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "21",
-        "parentid": "area_1"
+        "parentid": "area_1",
+        "ext_id": "21"
       }
     },
     {
@@ -6594,8 +6594,8 @@
       "name": "HR",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "22",
-        "parentid": "area_1"
+        "parentid": "area_1",
+        "ext_id": "22"
       }
     },
     {
@@ -6603,8 +6603,8 @@
       "name": "CRM",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "24",
-        "parentid": "area_5"
+        "parentid": "area_5",
+        "ext_id": "24"
       }
     },
     {
@@ -6612,8 +6612,8 @@
       "name": "Ledningssystem",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "25",
-        "parentid": "area_1"
+        "parentid": "area_1",
+        "ext_id": "25"
       }
     },
     {
@@ -6621,8 +6621,8 @@
       "name": "Forskningsgenomförande",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "33",
-        "parentid": "area_4"
+        "parentid": "area_4",
+        "ext_id": "33"
       }
     },
     {
@@ -6630,9 +6630,9 @@
       "name": "Klienthantering",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "36",
         "beskrivning": "Gruppen som behövs för att få en arbetsplatsen att fungera.",
-        "parentid": "area_7"
+        "parentid": "area_7",
+        "ext_id": "36"
       }
     },
     {
@@ -6640,9 +6640,9 @@
       "name": "Resor och transport",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "37",
         "beskrivning": "Reseplanering, bokning, transport (hyrbil/tåg/flyg/taxi)\nBokning av transport av gods",
-        "parentid": "area_9"
+        "parentid": "area_9",
+        "ext_id": "37"
       }
     },
     {
@@ -6650,8 +6650,8 @@
       "name": "Forskningsstöd och administration",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "39",
-        "parentid": "area_4"
+        "parentid": "area_4",
+        "ext_id": "39"
       }
     },
     {
@@ -6659,8 +6659,8 @@
       "name": "Studentrelationer",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "40",
-        "parentid": "area_3"
+        "parentid": "area_3",
+        "ext_id": "40"
       }
     },
     {
@@ -6668,8 +6668,8 @@
       "name": "Miljö",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "42",
-        "parentid": "area_6"
+        "parentid": "area_6",
+        "ext_id": "42"
       }
     },
     {
@@ -6677,8 +6677,8 @@
       "name": "Djur",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "43",
-        "parentid": "area_6"
+        "parentid": "area_6",
+        "ext_id": "43"
       }
     },
     {
@@ -6686,8 +6686,8 @@
       "name": "Service",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "44",
-        "parentid": "area_9"
+        "parentid": "area_9",
+        "ext_id": "44"
       }
     },
     {
@@ -6695,8 +6695,8 @@
       "name": "Support",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "45",
-        "parentid": "area_9"
+        "parentid": "area_9",
+        "ext_id": "45"
       }
     },
     {
@@ -6704,9 +6704,9 @@
       "name": "Telefoni",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "46",
         "beskrivning": "Televäxel, nummerplanshantering",
-        "parentid": "area_7"
+        "parentid": "area_7",
+        "ext_id": "46"
       }
     },
     {
@@ -6714,8 +6714,8 @@
       "name": "Utskrift",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "47",
-        "parentid": "area_7"
+        "parentid": "area_7",
+        "ext_id": "47"
       }
     },
     {
@@ -6723,8 +6723,8 @@
       "name": "Asset Management",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "48",
-        "parentid": "area_7"
+        "parentid": "area_7",
+        "ext_id": "48"
       }
     },
     {
@@ -6732,8 +6732,8 @@
       "name": "Utlåning bibliotek",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "49",
-        "parentid": "area_2"
+        "parentid": "area_2",
+        "ext_id": "49"
       }
     },
     {
@@ -6741,8 +6741,8 @@
       "name": "Sök",
       "label": "ApplicationGroup",
       "metadata": {
-        "id": "50",
-        "parentid": "area_2"
+        "parentid": "area_2",
+        "ext_id": "50"
       }
     },
     {
@@ -6750,9 +6750,9 @@
       "name": "Diarie",
       "label": "Application",
       "metadata": {
-        "id": "3",
         "beskrivning": "2023-04-13: Bytt namn från Hantering av arkivdata",
-        "parentid": "group_19"
+        "parentid": "group_19",
+        "ext_id": "3"
       }
     },
     {
@@ -6760,9 +6760,9 @@
       "name": "Bevarande",
       "label": "Application",
       "metadata": {
-        "id": "4",
         "beskrivning": "2023-04-13: Bytt namn från Arkivlagring",
-        "parentid": "group_19"
+        "parentid": "group_19",
+        "ext_id": "4"
       }
     },
     {
@@ -6770,8 +6770,8 @@
       "name": "Digital signering",
       "label": "Application",
       "metadata": {
-        "id": "6",
-        "parentid": "group_20"
+        "parentid": "group_20",
+        "ext_id": "6"
       }
     },
     {
@@ -6779,8 +6779,8 @@
       "name": "Felanmälan",
       "label": "Application",
       "metadata": {
-        "id": "8",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "8"
       }
     },
     {
@@ -6788,8 +6788,8 @@
       "name": "IT-supportstöd",
       "label": "Application",
       "metadata": {
-        "id": "10",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "10"
       }
     },
     {
@@ -6797,8 +6797,8 @@
       "name": "IT-tjänstekatalog",
       "label": "Application",
       "metadata": {
-        "id": "11",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "11"
       }
     },
     {
@@ -6806,8 +6806,8 @@
       "name": "Telefoni",
       "label": "Application",
       "metadata": {
-        "id": "13",
-        "parentid": "group_36"
+        "parentid": "group_36",
+        "ext_id": "13"
       }
     },
     {
@@ -6815,8 +6815,8 @@
       "name": "Distributionslista för e-post",
       "label": "Application",
       "metadata": {
-        "id": "15",
-        "parentid": "group_36"
+        "parentid": "group_36",
+        "ext_id": "15"
       }
     },
     {
@@ -6824,8 +6824,8 @@
       "name": "Arkitektur",
       "label": "Application",
       "metadata": {
-        "id": "16",
-        "parentid": "group_25"
+        "parentid": "group_25",
+        "ext_id": "16"
       }
     },
     {
@@ -6833,8 +6833,8 @@
       "name": "Infoskärmar",
       "label": "Application",
       "metadata": {
-        "id": "21",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "21"
       }
     },
     {
@@ -6842,8 +6842,8 @@
       "name": "Dokument- och filhantering",
       "label": "Application",
       "metadata": {
-        "id": "26",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "26"
       }
     },
     {
@@ -6851,9 +6851,9 @@
       "name": "Onlinemöte",
       "label": "Application",
       "metadata": {
-        "id": "27",
         "beskrivning": "Grupp 2",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "27"
       }
     },
     {
@@ -6861,8 +6861,8 @@
       "name": "Utvecklingsplattform",
       "label": "Application",
       "metadata": {
-        "id": "28",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "28"
       }
     },
     {
@@ -6870,8 +6870,8 @@
       "name": "Projekt- och verksamhetsstöd",
       "label": "Application",
       "metadata": {
-        "id": "29",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "29"
       }
     },
     {
@@ -6879,8 +6879,8 @@
       "name": "Digitala möten",
       "label": "Application",
       "metadata": {
-        "id": "30",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "30"
       }
     },
     {
@@ -6888,8 +6888,8 @@
       "name": "Dokumentation",
       "label": "Application",
       "metadata": {
-        "id": "31",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "31"
       }
     },
     {
@@ -6897,8 +6897,8 @@
       "name": "Kalender",
       "label": "Application",
       "metadata": {
-        "id": "32",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "32"
       }
     },
     {
@@ -6906,8 +6906,8 @@
       "name": "Källkodsbibliotek",
       "label": "Application",
       "metadata": {
-        "id": "33",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "33"
       }
     },
     {
@@ -6915,8 +6915,8 @@
       "name": "Fakturahantering",
       "label": "Application",
       "metadata": {
-        "id": "34",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "34"
       }
     },
     {
@@ -6924,9 +6924,9 @@
       "name": "Finansiell styrning",
       "label": "Application",
       "metadata": {
-        "id": "35",
         "beskrivning": "T.ex. Budget\n\nIdag är budget det sätt verksamheten använder. I framtiden bör ett mer agilt förfarande vara mer lämpligt och då blir budget snarare ett verktyg för att se hur omföringar påverkar årets resultat över sprintarna",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "35"
       }
     },
     {
@@ -6934,8 +6934,8 @@
       "name": "Inköp",
       "label": "Application",
       "metadata": {
-        "id": "36",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "36"
       }
     },
     {
@@ -6943,8 +6943,8 @@
       "name": "Upphandling",
       "label": "Application",
       "metadata": {
-        "id": "37",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "37"
       }
     },
     {
@@ -6952,8 +6952,8 @@
       "name": "Ekonomisk redovisning",
       "label": "Application",
       "metadata": {
-        "id": "38",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "38"
       }
     },
     {
@@ -6961,8 +6961,8 @@
       "name": "Ekonomisk uppföljning",
       "label": "Application",
       "metadata": {
-        "id": "39",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "39"
       }
     },
     {
@@ -6970,8 +6970,8 @@
       "name": "Lönehantering",
       "label": "Application",
       "metadata": {
-        "id": "41",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "41"
       }
     },
     {
@@ -6979,8 +6979,8 @@
       "name": "Timredovisning",
       "label": "Application",
       "metadata": {
-        "id": "42",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "42"
       }
     },
     {
@@ -6988,8 +6988,8 @@
       "name": "Anställning",
       "label": "Application",
       "metadata": {
-        "id": "43",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "43"
       }
     },
     {
@@ -6997,8 +6997,8 @@
       "name": "Rekrytering anställda",
       "label": "Application",
       "metadata": {
-        "id": "44",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "44"
       }
     },
     {
@@ -7006,8 +7006,8 @@
       "name": "Studentrekrytering",
       "label": "Application",
       "metadata": {
-        "id": "45",
-        "parentid": "group_40"
+        "parentid": "group_40",
+        "ext_id": "45"
       }
     },
     {
@@ -7015,8 +7015,8 @@
       "name": "Sponsring och fundraising",
       "label": "Application",
       "metadata": {
-        "id": "47",
-        "parentid": "group_24"
+        "parentid": "group_24",
+        "ext_id": "47"
       }
     },
     {
@@ -7024,9 +7024,9 @@
       "name": "Alumni",
       "label": "Application",
       "metadata": {
-        "id": "49",
         "beskrivning": "2023-04-13: Bytt namn från Amlumnadministration",
-        "parentid": "group_40"
+        "parentid": "group_40",
+        "ext_id": "49"
       }
     },
     {
@@ -7034,8 +7034,8 @@
       "name": "Enhetshantering",
       "label": "Application",
       "metadata": {
-        "id": "52",
-        "parentid": "group_36"
+        "parentid": "group_36",
+        "ext_id": "52"
       }
     },
     {
@@ -7043,8 +7043,8 @@
       "name": "Licenshantering",
       "label": "Application",
       "metadata": {
-        "id": "67",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "67"
       }
     },
     {
@@ -7052,8 +7052,8 @@
       "name": "Personregister",
       "label": "Application",
       "metadata": {
-        "id": "70",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "70"
       }
     },
     {
@@ -7061,8 +7061,8 @@
       "name": "Inventarieregister",
       "label": "Application",
       "metadata": {
-        "id": "71",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "71"
       }
     },
     {
@@ -7070,8 +7070,8 @@
       "name": "Identitetshantering",
       "label": "Application",
       "metadata": {
-        "id": "73",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "73"
       }
     },
     {
@@ -7079,8 +7079,8 @@
       "name": "Grupphantering",
       "label": "Application",
       "metadata": {
-        "id": "74",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "74"
       }
     },
     {
@@ -7088,8 +7088,8 @@
       "name": "Fastighet- och lokalregister",
       "label": "Application",
       "metadata": {
-        "id": "79",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "79"
       }
     },
     {
@@ -7097,8 +7097,8 @@
       "name": "Hyresavtal",
       "label": "Application",
       "metadata": {
-        "id": "80",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "80"
       }
     },
     {
@@ -7106,8 +7106,8 @@
       "name": "Inpassering",
       "label": "Application",
       "metadata": {
-        "id": "82",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "82"
       }
     },
     {
@@ -7115,8 +7115,8 @@
       "name": "Schemaläggning",
       "label": "Application",
       "metadata": {
-        "id": "91",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "91"
       }
     },
     {
@@ -7124,8 +7124,8 @@
       "name": "Administration av tentamensvakter",
       "label": "Application",
       "metadata": {
-        "id": "95",
-        "parentid": "group_5"
+        "parentid": "group_5",
+        "ext_id": "95"
       }
     },
     {
@@ -7133,9 +7133,9 @@
       "name": "Studieadministration",
       "label": "Application",
       "metadata": {
-        "id": "101",
         "beskrivning": "2023-04-13: Bytt namn från Studiedokumentation",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "101"
       }
     },
     {
@@ -7143,8 +7143,8 @@
       "name": "Kursvärdering",
       "label": "Application",
       "metadata": {
-        "id": "103",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "103"
       }
     },
     {
@@ -7152,8 +7152,8 @@
       "name": "Kursval",
       "label": "Application",
       "metadata": {
-        "id": "104",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "104"
       }
     },
     {
@@ -7161,8 +7161,8 @@
       "name": "Examenshandläggning",
       "label": "Application",
       "metadata": {
-        "id": "105",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "105"
       }
     },
     {
@@ -7170,9 +7170,9 @@
       "name": "Utbyteshantering",
       "label": "Application",
       "metadata": {
-        "id": "108",
         "beskrivning": "2023-04-13: Bytt namn från Studentmobilitet",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "108"
       }
     },
     {
@@ -7180,9 +7180,9 @@
       "name": "Uppgiftshantering",
       "label": "Application",
       "metadata": {
-        "id": "110",
         "beskrivning": "Personlig planering av uppgifter. ToDo",
-        "parentid": "group_26"
+        "parentid": "group_26",
+        "ext_id": "110"
       }
     },
     {
@@ -7190,8 +7190,8 @@
       "name": "E-postlisthantering",
       "label": "Application",
       "metadata": {
-        "id": "111",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "111"
       }
     },
     {
@@ -7199,9 +7199,9 @@
       "name": "Kapitalförvaltning",
       "label": "Application",
       "metadata": {
-        "id": "114",
         "beskrivning": "Omföringar mellan interna konton\nFonder?\nAgresso Unit4 funktionalitet?",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "114"
       }
     },
     {
@@ -7209,9 +7209,9 @@
       "name": "E-handel",
       "label": "Application",
       "metadata": {
-        "id": "115",
         "beskrivning": "Egen webbutik där slutanvändare kan köpa produkter\nEx. Tryckeriets tjänster, varumärkeshandel",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "115"
       }
     },
     {
@@ -7219,8 +7219,8 @@
       "name": "Behörighetshantering",
       "label": "Application",
       "metadata": {
-        "id": "117",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "117"
       }
     },
     {
@@ -7228,9 +7228,9 @@
       "name": "Identitetsverifiering",
       "label": "Application",
       "metadata": {
-        "id": "118",
         "beskrivning": "Verifierar identiteten på en person. Ej Autentisering!\nT.ex. Kontroll av id-handling (legitimering)\nVid ett enskillt tillfälle verifiera identiteten",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "118"
       }
     },
     {
@@ -7238,9 +7238,9 @@
       "name": "Examination och bedömning",
       "label": "Application",
       "metadata": {
-        "id": "122",
         "beskrivning": "2023-04-13: Bytt namn från Tentamenshantering\nPlanera, hantera tentamen inkl. anmälan",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "122"
       }
     },
     {
@@ -7248,9 +7248,9 @@
       "name": "Anmälan",
       "label": "Application",
       "metadata": {
-        "id": "123",
         "beskrivning": "Kursanmälan, labbanmälan, m.m.",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "123"
       }
     },
     {
@@ -7258,9 +7258,9 @@
       "name": "Antagning",
       "label": "Application",
       "metadata": {
-        "id": "124",
         "beskrivning": "Kurs- och programantagning",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "124"
       }
     },
     {
@@ -7268,9 +7268,9 @@
       "name": "Inloggningshanterare (IdP, Lan Manager)",
       "label": "Application",
       "metadata": {
-        "id": "125",
         "beskrivning": "Hantering av inloggningsflöden, Kan även autentisera som tjänst",
-        "parentid": "group_16"
+        "parentid": "group_16",
+        "ext_id": "125"
       }
     },
     {
@@ -7278,8 +7278,8 @@
       "name": "Bemanningsplanering",
       "label": "Application",
       "metadata": {
-        "id": "127",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "127"
       }
     },
     {
@@ -7287,8 +7287,8 @@
       "name": "Chat",
       "label": "Application",
       "metadata": {
-        "id": "130",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "130"
       }
     },
     {
@@ -7296,8 +7296,8 @@
       "name": "Betalning",
       "label": "Application",
       "metadata": {
-        "id": "132",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "132"
       }
     },
     {
@@ -7305,8 +7305,8 @@
       "name": "Reseräkning- och utläggshantering",
       "label": "Application",
       "metadata": {
-        "id": "134",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "134"
       }
     },
     {
@@ -7314,9 +7314,9 @@
       "name": "Ledighets- och frånvarohantering",
       "label": "Application",
       "metadata": {
-        "id": "135",
         "beskrivning": "Hantera ledigheter, semester, föräldraledighet, tjänstledighet, sjukfrånvaro och VAB",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "135"
       }
     },
     {
@@ -7324,9 +7324,9 @@
       "name": "Uppdragshantering",
       "label": "Application",
       "metadata": {
-        "id": "136",
         "beskrivning": "T.ex. attest- och rollhantering i HR-system",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "136"
       }
     },
     {
@@ -7334,8 +7334,8 @@
       "name": "Kompetensutveckling",
       "label": "Application",
       "metadata": {
-        "id": "137",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "137"
       }
     },
     {
@@ -7343,8 +7343,8 @@
       "name": "Uppföljning HR",
       "label": "Application",
       "metadata": {
-        "id": "138",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "138"
       }
     },
     {
@@ -7352,8 +7352,8 @@
       "name": "Pensionshantering",
       "label": "Application",
       "metadata": {
-        "id": "139",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "139"
       }
     },
     {
@@ -7361,8 +7361,8 @@
       "name": "Företagshälsovård",
       "label": "Application",
       "metadata": {
-        "id": "140",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "140"
       }
     },
     {
@@ -7370,8 +7370,8 @@
       "name": "Jämställdhet och likabehandling",
       "label": "Application",
       "metadata": {
-        "id": "141",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "141"
       }
     },
     {
@@ -7379,8 +7379,8 @@
       "name": "Arbetsmiljö",
       "label": "Application",
       "metadata": {
-        "id": "142",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "142"
       }
     },
     {
@@ -7388,8 +7388,8 @@
       "name": "Plagiatkontroll forskning",
       "label": "Application",
       "metadata": {
-        "id": "143",
-        "parentid": "group_33"
+        "parentid": "group_33",
+        "ext_id": "143"
       }
     },
     {
@@ -7397,9 +7397,9 @@
       "name": "Reseplanering",
       "label": "Application",
       "metadata": {
-        "id": "144",
         "beskrivning": "Sök färdvägar/datum olika alternativ.",
-        "parentid": "group_37"
+        "parentid": "group_37",
+        "ext_id": "144"
       }
     },
     {
@@ -7407,9 +7407,9 @@
       "name": "Resebokning",
       "label": "Application",
       "metadata": {
-        "id": "145",
         "beskrivning": "Boka Flyg/Hotell/Tåg/Taxi m.m.\nÄven internbokning av bil (bilpool)",
-        "parentid": "group_37"
+        "parentid": "group_37",
+        "ext_id": "145"
       }
     },
     {
@@ -7417,8 +7417,8 @@
       "name": "Etikprövning",
       "label": "Application",
       "metadata": {
-        "id": "146",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "146"
       }
     },
     {
@@ -7426,8 +7426,8 @@
       "name": "Datahanteringsplan",
       "label": "Application",
       "metadata": {
-        "id": "147",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "147"
       }
     },
     {
@@ -7435,8 +7435,8 @@
       "name": "Datadelning",
       "label": "Application",
       "metadata": {
-        "id": "148",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "148"
       }
     },
     {
@@ -7444,8 +7444,8 @@
       "name": "Publicering",
       "label": "Application",
       "metadata": {
-        "id": "149",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "149"
       }
     },
     {
@@ -7453,8 +7453,8 @@
       "name": "Forskningsanslag",
       "label": "Application",
       "metadata": {
-        "id": "150",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "150"
       }
     },
     {
@@ -7462,9 +7462,9 @@
       "name": "Beredskap",
       "label": "Application",
       "metadata": {
-        "id": "153",
         "beskrivning": "Planering och hantering av beredskap för t.ex. IT-tjänster",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "153"
       }
     },
     {
@@ -7472,8 +7472,8 @@
       "name": "Ordbehandling",
       "label": "Application",
       "metadata": {
-        "id": "155",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "155"
       }
     },
     {
@@ -7481,8 +7481,8 @@
       "name": "Kalkylbladshantering",
       "label": "Application",
       "metadata": {
-        "id": "156",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "156"
       }
     },
     {
@@ -7490,8 +7490,8 @@
       "name": "Kårsystem",
       "label": "Application",
       "metadata": {
-        "id": "158",
-        "parentid": "group_40"
+        "parentid": "group_40",
+        "ext_id": "158"
       }
     },
     {
@@ -7499,8 +7499,8 @@
       "name": "Krishantering",
       "label": "Application",
       "metadata": {
-        "id": "159",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "159"
       }
     },
     {
@@ -7508,9 +7508,9 @@
       "name": "Resultathantering",
       "label": "Application",
       "metadata": {
-        "id": "160",
         "beskrivning": "T.ex. bedömningsöversikt",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "160"
       }
     },
     {
@@ -7518,8 +7518,8 @@
       "name": "Utbildningsplanering",
       "label": "Application",
       "metadata": {
-        "id": "161",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "161"
       }
     },
     {
@@ -7527,8 +7527,8 @@
       "name": "Studentservice",
       "label": "Application",
       "metadata": {
-        "id": "162",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "162"
       }
     },
     {
@@ -7536,8 +7536,8 @@
       "name": "Stipendier",
       "label": "Application",
       "metadata": {
-        "id": "163",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "163"
       }
     },
     {
@@ -7545,9 +7545,9 @@
       "name": "LMS/LME",
       "label": "Application",
       "metadata": {
-        "id": "164",
         "beskrivning": "Learning Management System/\nLearning Management Environment",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "164"
       }
     },
     {
@@ -7555,8 +7555,8 @@
       "name": "Plagiatkontroll",
       "label": "Application",
       "metadata": {
-        "id": "165",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "165"
       }
     },
     {
@@ -7564,8 +7564,8 @@
       "name": "Stipendier",
       "label": "Application",
       "metadata": {
-        "id": "166",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "166"
       }
     },
     {
@@ -7573,8 +7573,8 @@
       "name": "Kassahantering",
       "label": "Application",
       "metadata": {
-        "id": "168",
-        "parentid": "group_21"
+        "parentid": "group_21",
+        "ext_id": "168"
       }
     },
     {
@@ -7582,8 +7582,8 @@
       "name": "Organisation",
       "label": "Application",
       "metadata": {
-        "id": "169",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "169"
       }
     },
     {
@@ -7591,8 +7591,8 @@
       "name": "Planering och uppföljning",
       "label": "Application",
       "metadata": {
-        "id": "170",
-        "parentid": "group_25"
+        "parentid": "group_25",
+        "ext_id": "170"
       }
     },
     {
@@ -7600,9 +7600,9 @@
       "name": "Transport",
       "label": "Application",
       "metadata": {
-        "id": "171",
         "beskrivning": "Godstransport",
-        "parentid": "group_37"
+        "parentid": "group_37",
+        "ext_id": "171"
       }
     },
     {
@@ -7610,8 +7610,8 @@
       "name": "Personuppgiftshantering",
       "label": "Application",
       "metadata": {
-        "id": "172",
-        "parentid": "group_20"
+        "parentid": "group_20",
+        "ext_id": "172"
       }
     },
     {
@@ -7619,8 +7619,8 @@
       "name": "Uppföljning forskning",
       "label": "Application",
       "metadata": {
-        "id": "173",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "173"
       }
     },
     {
@@ -7628,8 +7628,8 @@
       "name": "Forskningsprojektregister (CRIS)",
       "label": "Application",
       "metadata": {
-        "id": "174",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "174"
       }
     },
     {
@@ -7637,8 +7637,8 @@
       "name": "Forskningsavtal",
       "label": "Application",
       "metadata": {
-        "id": "175",
-        "parentid": "group_39"
+        "parentid": "group_39",
+        "ext_id": "175"
       }
     },
     {
@@ -7646,8 +7646,8 @@
       "name": "Lokalbokning",
       "label": "Application",
       "metadata": {
-        "id": "176",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "176"
       }
     },
     {
@@ -7655,8 +7655,8 @@
       "name": "Lokalvård",
       "label": "Application",
       "metadata": {
-        "id": "177",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "177"
       }
     },
     {
@@ -7664,8 +7664,8 @@
       "name": "Fysisk säkerhet",
       "label": "Application",
       "metadata": {
-        "id": "178",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "178"
       }
     },
     {
@@ -7673,8 +7673,8 @@
       "name": "Kemikaliehantering",
       "label": "Application",
       "metadata": {
-        "id": "179",
-        "parentid": "group_42"
+        "parentid": "group_42",
+        "ext_id": "179"
       }
     },
     {
@@ -7682,9 +7682,9 @@
       "name": "Djurhållning",
       "label": "Application",
       "metadata": {
-        "id": "180",
         "beskrivning": "Fysisk hantering av djur",
-        "parentid": "group_43"
+        "parentid": "group_43",
+        "ext_id": "180"
       }
     },
     {
@@ -7692,8 +7692,8 @@
       "name": "Journalsystem för djur",
       "label": "Application",
       "metadata": {
-        "id": "181",
-        "parentid": "group_43"
+        "parentid": "group_43",
+        "ext_id": "181"
       }
     },
     {
@@ -7701,8 +7701,8 @@
       "name": "Relationer",
       "label": "Application",
       "metadata": {
-        "id": "182",
-        "parentid": "group_24"
+        "parentid": "group_24",
+        "ext_id": "182"
       }
     },
     {
@@ -7710,8 +7710,8 @@
       "name": "Marknadsföring",
       "label": "Application",
       "metadata": {
-        "id": "183",
-        "parentid": "group_24"
+        "parentid": "group_24",
+        "ext_id": "183"
       }
     },
     {
@@ -7719,8 +7719,8 @@
       "name": "Alumni",
       "label": "Application",
       "metadata": {
-        "id": "184",
-        "parentid": "group_24"
+        "parentid": "group_24",
+        "ext_id": "184"
       }
     },
     {
@@ -7728,8 +7728,8 @@
       "name": "Röst-/videosamtal",
       "label": "Application",
       "metadata": {
-        "id": "185",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "185"
       }
     },
     {
@@ -7737,8 +7737,8 @@
       "name": "Sociala media",
       "label": "Application",
       "metadata": {
-        "id": "186",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "186"
       }
     },
     {
@@ -7746,8 +7746,8 @@
       "name": "Webbanalys",
       "label": "Application",
       "metadata": {
-        "id": "187",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "187"
       }
     },
     {
@@ -7755,8 +7755,8 @@
       "name": "Sök och indexering",
       "label": "Application",
       "metadata": {
-        "id": "188",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "188"
       }
     },
     {
@@ -7764,8 +7764,8 @@
       "name": "Digital asset management",
       "label": "Application",
       "metadata": {
-        "id": "189",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "189"
       }
     },
     {
@@ -7773,8 +7773,8 @@
       "name": "Kartor och navigering",
       "label": "Application",
       "metadata": {
-        "id": "190",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "190"
       }
     },
     {
@@ -7782,9 +7782,9 @@
       "name": "Intranet",
       "label": "Application",
       "metadata": {
-        "id": "191",
         "beskrivning": "Interna kanaler",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "191"
       }
     },
     {
@@ -7792,9 +7792,9 @@
       "name": "Extern webbpublicering",
       "label": "Application",
       "metadata": {
-        "id": "192",
         "beskrivning": "Publika kanaler",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "192"
       }
     },
     {
@@ -7802,8 +7802,8 @@
       "name": "Enkätsystem",
       "label": "Application",
       "metadata": {
-        "id": "193",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "193"
       }
     },
     {
@@ -7811,8 +7811,8 @@
       "name": "Wiki",
       "label": "Application",
       "metadata": {
-        "id": "194",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "194"
       }
     },
     {
@@ -7820,8 +7820,8 @@
       "name": "Extern kommunikation",
       "label": "Application",
       "metadata": {
-        "id": "195",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "195"
       }
     },
     {
@@ -7829,8 +7829,8 @@
       "name": "Intern kommunikation",
       "label": "Application",
       "metadata": {
-        "id": "196",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "196"
       }
     },
     {
@@ -7838,8 +7838,8 @@
       "name": "Blogg/Vlogg",
       "label": "Application",
       "metadata": {
-        "id": "197",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "197"
       }
     },
     {
@@ -7847,8 +7847,8 @@
       "name": "Informationsinsamling (enkät)",
       "label": "Application",
       "metadata": {
-        "id": "198",
-        "parentid": "group_33"
+        "parentid": "group_33",
+        "ext_id": "198"
       }
     },
     {
@@ -7856,9 +7856,9 @@
       "name": "Forskningsdeltagande",
       "label": "Application",
       "metadata": {
-        "id": "199",
         "beskrivning": "Samtycken, godkännande av deltagande",
-        "parentid": "group_33"
+        "parentid": "group_33",
+        "ext_id": "199"
       }
     },
     {
@@ -7866,8 +7866,8 @@
       "name": "Medarbetarundersökningar",
       "label": "Application",
       "metadata": {
-        "id": "200",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "200"
       }
     },
     {
@@ -7875,8 +7875,8 @@
       "name": "Eventhantering",
       "label": "Application",
       "metadata": {
-        "id": "201",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "201"
       }
     },
     {
@@ -7884,8 +7884,8 @@
       "name": "Enkäter",
       "label": "Application",
       "metadata": {
-        "id": "202",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "202"
       }
     },
     {
@@ -7893,9 +7893,9 @@
       "name": "Boka",
       "label": "Application",
       "metadata": {
-        "id": "203",
         "beskrivning": "Boka projektor, lånedator",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "203"
       }
     },
     {
@@ -7903,9 +7903,9 @@
       "name": "Felanmälan-lokal",
       "label": "Application",
       "metadata": {
-        "id": "204",
         "beskrivning": "Fel på lokal eller utrustning i lokal",
-        "parentid": "group_13"
+        "parentid": "group_13",
+        "ext_id": "204"
       }
     },
     {
@@ -7913,9 +7913,9 @@
       "name": "Tryckeri",
       "label": "Application",
       "metadata": {
-        "id": "205",
         "beskrivning": "Beställningssystem och produkter kring tryckerihantering",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "205"
       }
     },
     {
@@ -7923,9 +7923,9 @@
       "name": "Internförsälning",
       "label": "Application",
       "metadata": {
-        "id": "206",
         "beskrivning": "Inklusive beställning",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "206"
       }
     },
     {
@@ -7933,8 +7933,8 @@
       "name": "Köhantering",
       "label": "Application",
       "metadata": {
-        "id": "207",
-        "parentid": "group_44"
+        "parentid": "group_44",
+        "ext_id": "207"
       }
     },
     {
@@ -7942,8 +7942,8 @@
       "name": "Ärendehantering",
       "label": "Application",
       "metadata": {
-        "id": "208",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "208"
       }
     },
     {
@@ -7951,8 +7951,8 @@
       "name": "Fjärrhjälp",
       "label": "Application",
       "metadata": {
-        "id": "209",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "209"
       }
     },
     {
@@ -7960,9 +7960,9 @@
       "name": "Användarguider",
       "label": "Application",
       "metadata": {
-        "id": "210",
         "beskrivning": "Inklusive FAQ",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "210"
       }
     },
     {
@@ -7970,8 +7970,8 @@
       "name": "Beredskap",
       "label": "Application",
       "metadata": {
-        "id": "211",
-        "parentid": "group_45"
+        "parentid": "group_45",
+        "ext_id": "211"
       }
     },
     {
@@ -7979,8 +7979,8 @@
       "name": "Telefonabonnemang",
       "label": "Application",
       "metadata": {
-        "id": "212",
-        "parentid": "group_46"
+        "parentid": "group_46",
+        "ext_id": "212"
       }
     },
     {
@@ -7988,8 +7988,8 @@
       "name": "Hänvisning",
       "label": "Application",
       "metadata": {
-        "id": "213",
-        "parentid": "group_46"
+        "parentid": "group_46",
+        "ext_id": "213"
       }
     },
     {
@@ -7997,8 +7997,8 @@
       "name": "SMS-utskick",
       "label": "Application",
       "metadata": {
-        "id": "214",
-        "parentid": "group_8"
+        "parentid": "group_8",
+        "ext_id": "214"
       }
     },
     {
@@ -8006,8 +8006,8 @@
       "name": "Röstbrevlåda",
       "label": "Application",
       "metadata": {
-        "id": "215",
-        "parentid": "group_46"
+        "parentid": "group_46",
+        "ext_id": "215"
       }
     },
     {
@@ -8015,8 +8015,8 @@
       "name": "Schemaunderlag",
       "label": "Application",
       "metadata": {
-        "id": "216",
-        "parentid": "group_6"
+        "parentid": "group_6",
+        "ext_id": "216"
       }
     },
     {
@@ -8024,9 +8024,9 @@
       "name": "Kunskapskontroll",
       "label": "Application",
       "metadata": {
-        "id": "217",
         "beskrivning": "Digital tentamen och andra examinationsformer",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "217"
       }
     },
     {
@@ -8034,8 +8034,8 @@
       "name": "Kursanalys",
       "label": "Application",
       "metadata": {
-        "id": "218",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "218"
       }
     },
     {
@@ -8043,8 +8043,8 @@
       "name": "Personalkatalog",
       "label": "Application",
       "metadata": {
-        "id": "219",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "219"
       }
     },
     {
@@ -8052,8 +8052,8 @@
       "name": "Programval",
       "label": "Application",
       "metadata": {
-        "id": "220",
-        "parentid": "group_4"
+        "parentid": "group_4",
+        "ext_id": "220"
       }
     },
     {
@@ -8061,8 +8061,8 @@
       "name": "Personalförmåner",
       "label": "Application",
       "metadata": {
-        "id": "221",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "221"
       }
     },
     {
@@ -8070,8 +8070,8 @@
       "name": "E-post",
       "label": "Application",
       "metadata": {
-        "id": "222",
-        "parentid": "group_12"
+        "parentid": "group_12",
+        "ext_id": "222"
       }
     },
     {
@@ -8079,8 +8079,8 @@
       "name": "Journalhantering inom klinisk forskning",
       "label": "Application",
       "metadata": {
-        "id": "223",
-        "parentid": "group_33"
+        "parentid": "group_33",
+        "ext_id": "223"
       }
     },
     {
@@ -8088,8 +8088,8 @@
       "name": "Rehabilitering",
       "label": "Application",
       "metadata": {
-        "id": "224",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "224"
       }
     },
     {
@@ -8097,9 +8097,9 @@
       "name": "Resursplanering (ERP)",
       "label": "Application",
       "metadata": {
-        "id": "225",
         "beskrivning": "Traditionell mening med resursplanering av anställda och resurser. Det finns resursplanering inom andra områden med då som specialiseringar.",
-        "parentid": "group_22"
+        "parentid": "group_22",
+        "ext_id": "225"
       }
     },
     {
@@ -8107,8 +8107,8 @@
       "name": "Utlämnande",
       "label": "Application",
       "metadata": {
-        "id": "227",
-        "parentid": "group_20"
+        "parentid": "group_20",
+        "ext_id": "227"
       }
     },
     {
@@ -8116,9 +8116,9 @@
       "name": "Arkivförteckning",
       "label": "Application",
       "metadata": {
-        "id": "228",
         "beskrivning": "Visual Arkiv",
-        "parentid": "group_19"
+        "parentid": "group_19",
+        "ext_id": "228"
       }
     }
   ],
@@ -25214,13 +25214,6 @@
       "id": "6751C17DA0DA5698AD4992FBSUPPORTS",
       "from": "6751C17DA0DA",
       "to": "5698AD4992FB",
-      "type": "SUPPORTS",
-      "metadata": {}
-    },
-    {
-      "id": "EB4A3985ECC1D8B1955200EASUPPORTS",
-      "from": "EB4A3985ECC1",
-      "to": "D8B1955200EA",
       "type": "SUPPORTS",
       "metadata": {}
     },

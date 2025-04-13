@@ -24,19 +24,7 @@ export function resetData() {
 }
 
 
-export function initData(nodeTree: LevelNode[]): LevelNode[] {
-    console.log('Initializing data...');
-    if (Data.length > 0) {
-        return Data;
-    }
-
-    console.log('Data length:', nodeTree.length);
-    if (nodeTree.length > 0) {
-        setData(nodeTree); // Initialize DataStore with provided data
-        setFilteredData(nodeTree);
-        return nodeTree;
-    }
-
+export function initData(): LevelNode[] {
     const saved = localStorage.getItem('groupedData');
     if (saved) {
         const parsed = JSON.parse(saved) as LevelNode[];

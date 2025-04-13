@@ -269,9 +269,29 @@
         // location.reload();
     }
 
+    async function loadDataFromDb(){
+        const dataResponse = await fetch('/api/arm', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await dataResponse.json();
+
+        const orderedByName = data.sort((a: { name: string }, b: { name: string }) => {
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+        });
+
+        setData(orderedByName);
+
+    }
+
 
     onMount(() => {
-        initData(nodeTree);
+        initData();
         initConditionalFormattingRules();
 
         
@@ -292,7 +312,14 @@
             <header>
                 <span><strong>Select data to start</strong></span>
             </header>
-            <input style="margin:auto" type="file" accept=".xlsx" onchange={handleFile} />
+            <label> 
+                <span data-tooltip="Select a file to load data from">Load from excel file</span>
+                <input style="margin:auto" type="file" accept=".xlsx" onchange={handleFile} />
+            </label>
+            <p>Or load from database</p>
+            <div style="float:left;" >
+                <button class="secondary" onclick={loadDataFromDb} >Load from database</button>
+            </div>
         </article>
     </main>
     {:else}

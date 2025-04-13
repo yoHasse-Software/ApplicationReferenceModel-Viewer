@@ -1,23 +1,22 @@
-// Load and create nodes with metadata
-CALL apoc.load.json("file:///architecture.json") YIELD value
-UNWIND value.nodes AS node
+// Load and merge nodes with dynamic labels
+CALL apoc.load.json("file:///architecture.json") YIELD value AS data
+UNWIND data.nodes AS node
 MERGE (n {id: node.id})
+SET n:$(node.label)
 SET n.name = node.name
-SET n += node.metadata
-WITH n, node
-CALL apoc.create.addLabels(n, [node.label]) YIELD node AS _
-RETURN count(n) AS nodes_imported;
+SET n += node.metadata;
 
-// Load and create relationships with metadata
-CALL apoc.load.json("file:///architecture.json") YIELD value
-UNWIND value.relationships AS rel
+// Load and merge relationships with dynamic types
+CALL apoc.load.json("file:///architecture.json") YIELD value AS data2
+UNWIND data2.relationships AS rel
 MATCH (from {id: rel.from})
 MATCH (to {id: rel.to})
-MERGE (from)-[r:REL {id: rel.id}]->(to)
-SET r += rel.metadata
-WITH r, rel
-CALL apoc.refactor.setType(r, rel.type) YIELD input, output
-RETURN count(output) AS relationships_imported;
-
-
-
+CALL {
+  WITH from, to, rel
+  CALL apoc.cypher.doIt(
+    'MERGE (from)-[r:' + rel.type + ']->(to) SET r += $props',
+    {from: from, to: to, props: rel.metadata}
+  ) YIELD value AS inner
+  RETURN inner
+}
+RETURN 'Relationships processed' AS status;
