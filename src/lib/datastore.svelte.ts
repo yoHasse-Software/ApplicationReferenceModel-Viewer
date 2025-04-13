@@ -24,9 +24,17 @@ export function resetData() {
 }
 
 
-export function initData(): LevelNode[] {
+export function initData(nodeTree: LevelNode[]): LevelNode[] {
+    console.log('Initializing data...');
     if (Data.length > 0) {
         return Data;
+    }
+
+    console.log('Data length:', nodeTree.length);
+    if (nodeTree.length > 0) {
+        setData(nodeTree); // Initialize DataStore with provided data
+        setFilteredData(nodeTree);
+        return nodeTree;
     }
 
     const saved = localStorage.getItem('groupedData');

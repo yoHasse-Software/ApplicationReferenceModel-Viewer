@@ -2,13 +2,16 @@
     import { onMount } from 'svelte';
     import * as XLSX from 'xlsx';
     import Sidebar from './Sidebar.svelte';
-    import { type AppSoftware, type ConditionalFormatting, type RuleOperator, type DisplayOptions, type GroupLevel, type LevelNode } from '$lib/types';
+    import { type AppSoftware, type GroupLevel, type LevelNode } from '$lib/types';
     import ConditionalFormatDialogue from './ConditionalFormatDialogue.svelte';
     import HierarchyDiagram from './HierarchyDiagram.svelte';
-    import { Data, FilteredData, initConditionalFormattingRules, initData, setColumnHeaders, setData } from '$lib/datastore.svelte';
+    import { FilteredData, initConditionalFormattingRules, initData, setColumnHeaders, setData } from '$lib/datastore.svelte';
+
+
+    const { nodeTree }:
+    { nodeTree: LevelNode[] } = $props();
  
     // Example grouped data based on your CSV
-    let filteredData: GroupLevel[] = $state([]);
     let isConditionalFormatingDialogueOpen = $state(false);
 
     let sideBarComponent = $state() as Sidebar;
@@ -268,7 +271,7 @@
 
 
     onMount(() => {
-        initData();
+        initData(nodeTree);
         initConditionalFormattingRules();
 
         

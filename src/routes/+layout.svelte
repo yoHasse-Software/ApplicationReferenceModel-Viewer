@@ -1,8 +1,6 @@
 <script lang="ts">
     import { Data } from '$lib/datastore.svelte';
 
-
-    export const prerender = true;
     let { children } = $props();
 
 </script>

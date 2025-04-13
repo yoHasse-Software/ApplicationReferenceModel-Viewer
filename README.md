@@ -1,78 +1,114 @@
-# ARM Viewer
 
-ARM Viewer is a SvelteKit-based application for visualizing application reference models. It allows users to upload structured data (e.g., CSV or Excel files), group and filter the data, and apply conditional formatting rules for better visualization.
 
-## Features
-
-- **Data Upload**: Upload `.xlsx` files to visualize hierarchical data.
-- **Grouping**: Group data into multiple levels (N1, N2, N3, and applications).
-- **Filtering**: Filter data at each level to focus on specific subsets.
-- **Conditional Formatting**: Define rules to highlight data with emojis and styles.
-- **Responsive Design**: Automatically adjusts to different screen sizes.
-
-## Project Structure
 
 ```
-├── src/
-│   ├── app.d.ts                # Global TypeScript definitions
-│   ├── app.html                # HTML template for the app
-│   ├── lib/
-│   │   ├── components/         # Svelte components
-│   │   │   ├── AppMap.svelte               # Main visualization component
-│   │   │   ├── Sidebar.svelte              # Sidebar for filtering and display options
-│   │   │   ├── NLevelView.svelte           # Component for hierarchical views
-│   │   │   ├── ConditionalFormatDialogue.svelte # Conditional formatting UI
-│   │   ├── types.d.ts          # TypeScript type definitions
-│   ├── routes/
-│   │   ├── +layout.svelte      # Layout for the app
-│   │   ├── +page.svelte        # Main page of the app
-├── static/
-│   ├── css/
-│   │   ├── app.css             # Custom styles for the app
-├── svelte.config.js            # SvelteKit configuration
-├── tsconfig.json               # TypeScript configuration
-├── vite.config.ts              # Vite configuration
+
+// Application reference model and implementation
+(:ApplicationArea) 
+  -[:CONTAINS]-> (:ApplicationGroup)
+
+(:ApplicationGroup) 
+  -[:CONTAINS]-> (:Application)
+
+(:System) 
+  -[:SUPPORTS]-> (:Application)
+
+(:Application) 
+  -[:DEPLOYED_ON]-> (:System)
+
+(:Person) 
+  -[:MAINTAINS]-> (:Application)
+
+(:Application) 
+  -[:SUPPORTS]-> (:Process)
+
+(:Application) 
+  -[:USES]-> (:InformationSet)
+
+(:Application) 
+  -[:CONTAINS]-> (:ClassificationObject)
+
+(:ClassificationObject) 
+  -[:HAS]-> (:InformationSet)
+
+(:InformationSet) 
+  -[:CLASSIFIED_AS]-> (:CIAClassification) 
+
+(:Application) 
+  -[:PART_OF_LAYER]-> (:AppLayer)  
+
+(:Application) 
+  -[:CATEGORIZED_AS]-> (:AppCategory) 
+
+// Business process and capability structure
+(:Process) 
+  -[:REALIZES]-> (:Capability)
+
+(:Capability) 
+  -[:BELONGS_TO]-> (:CapabilityArchitecture)
+
+(:Process) 
+  -[:PART_OF]-> (:ProcessArchitecture) 
+
+// BMC and strategy
+(:BusinessModelCanvas) 
+  -[:REQUIRES]-> (:Capability)
+
+(:BusinessGoal) 
+  -[:UTFORMAR]-> (:TargetArchitecture)
+
+(:BusinessGoal) 
+  -[:INFLUENCES]-> (:BusinessModelCanvas)
+
+(:BusinessGoal) 
+  -[:STYRS_AV]-> (:ArchitecturePrinciple)
+
+(:ArchitecturePrinciple) 
+  -[:GUIDES]-> (:ReferenceArchitecture)
+
+(:ReferenceArchitecture) 
+  -[:GUIDES]-> (:TargetArchitecture)
+
+(:TargetArchitecture) 
+  -[:REALIZES]-> (:CapabilityArchitecture)
+
+(:TargetArchitecture) 
+  -[:STRUCTURES]-> (:ApplicationArchitecture) 
+
+(:Application) 
+  -[:PART_OF]-> (:ApplicationArchitecture) 
+
+
 ```
 
 
 
-## Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/arm-viewer.git
-   cd arm-viewer
-    ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-```bash
-npm run dev
 ```
 
-4. Open your browser and navigate to `http://localhost:5173` to view the application.
+# run commands
+docker run --name neo4j `
+  -p7474:7474 -p7687:7687 `
+  -e NEO4J_AUTH=neo4j/whassupmyhomie `
+  -e NEO4J_PLUGINS='["apoc"]' `
+  -e NEO4J_apoc_import_file_enabled=true `
+  -e NEO4J_apoc_export_file_enabled=true `
+  -e NEO4J_dbms_security_procedures_unrestricted=apoc.* `
+  -e NEO4J_dbms_security_procedures_allowlist=apoc.* `
+  -v "C:\Users\marnat\git\Arkitektur\ApplicationReferenceModel-Viewer\db\imports:/var/lib/neo4j/import" `
+  -d neo4j:2025.03
 
 
-## Usage
-1. Upload a `.xlsx` file using the upload button.
-2. Use the sidebar to group and filter the data by N1, N2, N3, and applications.
-3. Define conditional formatting rules to highlight specific data points.
-4. Explore the hierarchical views of the data.
-
-## Scripts
-* `npm run dev`: Start the development server.
-* `npm run build`: Build the application for production.
-* `npm run preview`: Preview the production build locally.
-* `npm run lint`: Run ESLint to check for code quality issues.
-* `npm run prettier`: Format the code using Prettier.
 
 
-## Dependencies
-- [SvelteKit](https://kit.svelte.dev/): Framework for building Svelte applications.
-- [Vite](https://vitejs.dev/): Build tool that provides a fast development environment.
-- [XLSX](): Library for parsing and writing spreadsheet files.
+Get-Content .\script.cypher | docker exec -i neo4j cypher-shell -u neo4j -p whassupmyhomie
 
+docker cp N3.csv neo4j:/var/lib/neo4j/import/
+
+
+```
+
+
+Get-Content .\db\jsonImport.cypher | docker exec -i neo4j cypher-shell -u neo4j -p whassupmyhomie
+
+
+db\content\architecture.json
