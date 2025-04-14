@@ -1,6 +1,6 @@
 
 <script lang="ts">
-    import { ConditionalFormattingRules, getColumnHeaders, initConditionalFormattingRules, saveConditionalFormattingRulesToStorage } from "$lib/datastore.svelte";
+    import { ConditionalFormattingRules, getLabels, initConditionalFormattingRules, saveConditionalFormattingRulesToStorage } from "$lib/datastore.svelte";
     import type { ConditionalFormatting, RuleOperator } from "$lib/types";
     import { onMount } from "svelte";
 
@@ -75,7 +75,7 @@
 
 
     onMount(() => {
-        columnHeaders = getColumnHeaders();
+        columnHeaders = getLabels();
     });
 
 </script>

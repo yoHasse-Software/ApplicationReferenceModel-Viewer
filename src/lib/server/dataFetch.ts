@@ -1,81 +1,118 @@
-import type { LevelNode } from "$lib/types";
+import type { RelationShip, LevelNode, GraphData, Entity, NodeRelation } from "$lib/types";
 import { driver } from '$lib/server/neo4j';
+import { NEO4J_DB_NAME } from "$env/static/private";
 
 
-
-function mapToLevelNode(data: any, parentId?: string): LevelNode {
-
-    const id = crypto.randomUUID(); // Generate a unique ID for the node
-
-    const node: LevelNode = {
-        id,
-        name: data.name,
-        parent: parentId,
-        value: 1,
-        isGroup: data.isGroup ?? true,
-        ...(data.metadata ? { metadata: data.metadata } : {})
-    };
-
-
-    if (data.children?.length) {
-        node.children = data.children.filter((child: any) => child.name).map((child: any) => mapToLevelNode(child, id));
-    }
-
-    return node;
-}
-
-
-export async function getAsTreeAsync() {
-
+export async function fetchGraphByLabelsAsync(labels: string[]): Promise<GraphData> {
     const session = driver.session({
-        database: 'neo4j' // Or your custom database name
+        database: NEO4J_DB_NAME // Or your custom database name
     });
 
+    const labelString = labels.map(label => `"${label}"`).join(', ');
+
+    const query = `
+WITH [${labelString}] AS inputLabels
+MATCH (n:$any(inputLabels))
+WITH 
+    n, 
+    [(n)-[r]->(m) | r] AS rels
+WITH 
+    n{
+        node: {
+            id: n.id,
+            name: n.name,
+            label: head(labels(n)),
+            metadata: n
+        },
+        relationships: [r IN rels | {
+            type: type(r),
+            from: startNode(r).id,
+            to: endNode(r).id,
+            metadata: r
+        }]
+    }
+RETURN 
+    n AS entity
+`;
+
     try {
-        const result = await session.run(`
-MATCH (area:ApplicationArea)
-OPTIONAL MATCH (area)-[:CONTAINS]->(group:ApplicationGroup)
-OPTIONAL MATCH (group)-[:CONTAINS]->(app:Application)
-OPTIONAL MATCH (sw:Software)-[:SUPPORTS]->(app)
+        const result = await session.run(query);
 
-WITH area, group, app, COLLECT(DISTINCT {
-  name: sw.name,
-  id: sw.id,
-  isGroup: false,
-  metadata: sw { .beskrivning, .livscykelstatus_verksamhet, .livscykelstatus_teknik, .livscykelstatus_kompetens, .leverantör, .drift_start }
-}) AS softwares
+        // console.log('Result:', result.records);
 
-WITH area, group, COLLECT(DISTINCT {
-  name: app.name,
-  id: app.id,
-  isGroup: true,
-  children: softwares,
-  metadata: app { .* }
-}) AS apps
+        const graphData = {
+            nodes: [] as Entity[],
+            relationships: [] as RelationShip[]
+        };
 
-WITH area, COLLECT(DISTINCT {
-  name: group.name,
-  id: group.id,
-  isGroup: true,
-  children: apps,
-  metadata: group { .* }
-}) AS groups
+        result.records.forEach(record => {
+            const resultEntity = record.get('entity');
+            const node = resultEntity.node;
+            const entity: Entity = {
+                id: node.id,
+                name: node.name,
+                label: node.label,
+                metadata: node.metadata
+            };
+            graphData.nodes.push(entity);
 
-RETURN {
-  name: area.name,
-  id: area.id,
-  isGroup: true,
-  children: groups,
-  metadata: area { .* }
-} AS tree
-`);
+            const relationships = resultEntity.relationships.map((rel: any) => {
+                const relationship: RelationShip = {
+                    from: node.id,
+                    type: rel.type,
+                    to: rel.to,
+                    metadata: rel.metadata
+                };
+                return relationship;
+            });
+            graphData.relationships.push(...relationships);
+        });
 
-        const rawTrees = result.records.map(record => record.get('tree'));
-        return rawTrees.map(root => mapToLevelNode(root));
+        console.log('Graph Data:', graphData);
+
+        return graphData; // Relationships can be fetched separately if needed
     } catch (error) {
         console.error('Error fetching data from Neo4j:', error);
-        return [];
+        return { nodes: [], relationships: [] };
     } finally {
         await session.close();
     }
+
 }
+
+export async function fetchGraphRelationshipsAsync() : Promise<NodeRelation[]> {
+    
+        const session = driver.session({
+            database: NEO4J_DB_NAME // Or your custom database name
+        });
+
+        const query = `
+MATCH (a)-[r]->(b)
+WITH 
+    head(labels(a)) AS from_label, 
+    type(r) AS rel_type, 
+    head(labels(b)) AS to_label,
+RETURN DISTINCT from_label, rel_type, to_label
+ORDER BY from_label, rel_type, to_label;
+`;
+
+        try {
+            const result = await session.run(query);
+            const records: NodeRelation[] = result.records.map(record => ({
+                fromLabel: record.get('from_label'),
+                relationType: record.get('rel_type'),
+                toLabel: record.get('to_label')
+            }));
+            return records;
+        } catch (error) {
+            console.error('Error fetching metadata from Neo4j:', error);
+            return [];
+        } finally {
+            await session.close();
+        }
+
+
+
+}
+
+

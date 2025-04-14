@@ -1,10 +1,12 @@
-import { getAsTreeAsync } from "$lib/server/dataFetch";
+
+
+import { fetchGraphRelationshipsAsync } from "$lib/server/dataFetch";
 import type { RequestEvent } from "@sveltejs/kit";
 
 
 export async function GET({ cookies }: RequestEvent) {
 
-    const data = await getAsTreeAsync();
+    const data = await fetchGraphRelationshipsAsync();
 
     return new Response(JSON.stringify(data), {
         headers: {
@@ -13,6 +15,5 @@ export async function GET({ cookies }: RequestEvent) {
         }
     });
 
+
 }
-
-

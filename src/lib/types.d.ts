@@ -8,13 +8,41 @@ export type AppSoftware = {
 }
 
 
+export type GraphData = {
+    nodes: Entity[];
+    relationships: RelationShip[];
+}
+
+export type Entity = {
+    id: string;
+    name: string;
+    label: string;
+    metadata: {
+        [key: string]: string | number | boolean;
+    };
+}
+
+
+export type RelationShip = {
+    from: string;
+    type: string;
+    to: string;
+    metadata: {
+        [key: string]: string | number | boolean;
+    };
+}
+
+export type NodeRelation = {
+    fromLabel: string;
+    toLabel: string;
+    relationType: string;
+}
+
+
 export type GroupLevel = { levelName: string; groups?: GroupLevel[]; children?: AppSoftware[]; };
 
 export type DisplayOptions = {
-    showN1: boolean;
-    showN2: boolean;
-    showN3: boolean;
-    showApps: boolean;
+    visibleLabels: boolean[];
     displayEmpty: boolean;
 }
 

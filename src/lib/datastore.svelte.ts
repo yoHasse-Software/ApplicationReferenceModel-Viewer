@@ -1,5 +1,5 @@
 import { SvelteMap } from "svelte/reactivity";
-import type { ConditionalFormatting, DisplayOptions, LevelNode } from "./types";
+import type { ConditionalFormatting, DisplayOptions, GraphData, LevelNode } from "./types";
 import { get, writable } from "svelte/store";
 
 // export const N1WIDTH = 1200;
@@ -7,94 +7,106 @@ export const N2WIDTH = 1200;
 export const N3WIDTH = N2WIDTH * 0.3;
 export const APPWIDTH = N3WIDTH*0.8;
 
+export const localStorageKey = 'graphData';
+const localStorageLabelsKey = 'labels';
+
+const localStorageConditionalFormattingKey = 'conditionalFormattingRules';
 
 
-export const Data: LevelNode[] = $state([]);
 
-export function setData(newData: LevelNode[]) {
-    Data.splice(0, Data.length); // Clear existing data
-    Data.push(...newData); // Add new data
-    localStorage.setItem('groupedData', JSON.stringify(Data));
+
+
+export const Data: GraphData = $state({
+    nodes: [],
+    relationships: []
+});
+
+export function setData(newData: GraphData) {
+    Data.nodes = newData.nodes; // Set new nodes
+    Data.relationships = newData.relationships; // Set new relationships
+    localStorage.setItem(localStorageKey, JSON.stringify(Data));
 }
 
 export function resetData() {
-    Data.splice(0, Data.length); // Clear existing data
-    localStorage.removeItem('groupedData'); // Remove from local storage
-    FilterDataStore.set([]); // Clear filtered data store
+    Data.nodes = []; // Clear nodes
+    Data.relationships = []; // Clear relationships
+    localStorage.removeItem(localStorageKey); // Remove from local storage
+    FilterDataStore.set({
+        nodes: [],
+        relationships: []
+    }); // Clear filtered data store
 }
 
 
-export function initData(): LevelNode[] {
-    const saved = localStorage.getItem('groupedData');
+export function initData(): GraphData {
+    const saved = localStorage.getItem(localStorageKey);
     if (saved) {
-        const parsed = JSON.parse(saved) as LevelNode[];
+        const parsed = JSON.parse(saved) as GraphData;
 
         setData(parsed); // Initialize DataStore with parsed data
         setFilteredData(parsed); // Initialize FilterDataStore with parsed data
         return parsed;
     } else {
-        return [];
+        return {
+            nodes: [],
+            relationships: []
+        };
     }
 }
 
 
-export const FilterDataStore = writable<LevelNode[]>([]);
+export const FilterDataStore = writable<GraphData>();
 
 
-export const FilteredData: LevelNode[] = $state([]);
+export const FilteredData: GraphData = $state({
+    nodes: [],
+    relationships: []
+});
 
-export function setFilteredData(newData: LevelNode[]) {
+export function setFilteredData(newData: GraphData) {
     FilterDataStore.set(newData);
 }
 
 FilterDataStore.subscribe((value) => {
-  if(value.length === 0) {
-    console.log('No filtered data available. Using original data.', value.length);
+  if(!value || value.nodes?.length === 0) {
+    console.log('No filtered data available. Using original data.', value?.nodes?.length );
     return;
   }
   
-  FilteredData.length = 0; // Clear the existing data
-  FilteredData.push(...value); // Add new data
+  FilteredData.nodes = value.nodes; // Set new nodes
+  FilteredData.relationships = value.relationships; // Set new relationships
+  console.log('Filtered data updated:', FilteredData.nodes.length, FilteredData.relationships.length);
 });  
 
 
 
 let columnHeaders: string[] = $state([]);
-export function getColumnHeaders() {
+export function getLabels() {
     if (columnHeaders.length > 0) {
         return columnHeaders;
     } else {
-        columnHeaders = JSON.parse(localStorage.getItem('columnHeaders') || '[]');
+        columnHeaders = JSON.parse(localStorage.getItem(localStorageLabelsKey) || '[]');
         return columnHeaders;
     }
 }
 
-export function setColumnHeaders(newHeaders: string[]) {
+export function setLabels(newHeaders: string[]) {
     columnHeaders = newHeaders;
-    localStorage.setItem('columnHeaders', JSON.stringify(columnHeaders));
+    localStorage.setItem(localStorageLabelsKey, JSON.stringify(columnHeaders));
 }
 
 export const DisplayOpsStore = writable<DisplayOptions>({
-    showN1: true,
-    showN2: true,
-    showN3: true,
-    showApps: true,
+    visibleLabels: [],
     displayEmpty: true
 });
 
 export const DisplayOps: DisplayOptions = $state({
-    showN1: true,
-    showN2: true,
-    showN3: true,
-    showApps: true,
+    visibleLabels: [],
     displayEmpty: true
 });
 
 DisplayOpsStore.subscribe((value) => {
-  DisplayOps.showN1 = value.showN1;
-  DisplayOps.showN2 = value.showN2;
-  DisplayOps.showN3 = value.showN3;
-  DisplayOps.showApps = value.showApps;
+  DisplayOps.visibleLabels = value.visibleLabels;
   DisplayOps.displayEmpty = value.displayEmpty;
 });
 
@@ -109,7 +121,7 @@ export function setDimensionMap(newMap: SvelteMap<string, {height: number, width
 }
 
 export function saveConditionalFormattingRulesToStorage() {
-    localStorage.setItem('ConditionalFormattingRules', JSON.stringify(ConditionalFormattingRules));
+    localStorage.setItem(localStorageConditionalFormattingKey, JSON.stringify(ConditionalFormattingRules));
 }
 
 export function initConditionalFormattingRules(): Array<ConditionalFormatting> {
@@ -117,7 +129,7 @@ export function initConditionalFormattingRules(): Array<ConditionalFormatting> {
         return ConditionalFormattingRules;
     }
 
-    const saved = localStorage.getItem('ConditionalFormattingRules');
+    const saved = localStorage.getItem(localStorageConditionalFormattingKey);
     if (saved) {
         const parsed = JSON.parse(saved) as Array<ConditionalFormatting>;
         ConditionalFormattingRules.push(...parsed);

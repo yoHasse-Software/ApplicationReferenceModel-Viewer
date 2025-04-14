@@ -8,14 +8,14 @@
 </script>
 
 <div class="grid">
-    <a href="/arm">
+    <a href="/nestedblock">
         <article>
-            <h1>Application Reference Architecture</h1>
+            <h1>View Data as Nested Block</h1>
         </article>
     </a>
-    <a href="/arm/overview">
+    <a href="/">
         <article>
-            <h1>Overview</h1>
+            <h1>Soon</h1>
         </article>
     </a>
 </div>
