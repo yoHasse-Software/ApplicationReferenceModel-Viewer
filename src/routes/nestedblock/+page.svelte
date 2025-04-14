@@ -128,6 +128,8 @@
 
         const graphData = await dataResponse.json() as GraphData;
 
+        console.log("Graph data from DB:", graphData);
+
         setData(graphData);
        
 

@@ -1,7 +1,7 @@
 
 <script lang="ts">
-    import { Data, setFilteredData, setData, resetData, DisplayOpsStore, DisplayOps } from "$lib/datastore.svelte";
-    import { type DisplayOptions, type LevelNode } from "$lib/types";
+    import { Data, setFilteredData, setData, resetData, DisplayOpsStore, DisplayOps, getLabels } from "$lib/datastore.svelte";
+    import { type DisplayOptions, type Entity, type GraphData, type LevelNode } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
 
@@ -17,151 +17,95 @@
         isSidebarVisible = !isSidebarVisible;
     }
 
-    type Filter = {
-        n1: string;
-        n2: string;
-        n3: string;
-        app: string;
-    };
-
-    let filters = $state({
-        n1: '',
-        n2: '',
-        n3: '',
-        app: ''
-    });
-
     let displayOps = $state<DisplayOptions>({
         displayEmpty: true,
-        showN1: true,
-        showN2: true,
-        showN3: true,
-        showApps: true
+        visibleLabels: [],
     });
 
-    let n1Options = $state([]) as string[];
-    let n2Options = $state([]) as string[];
-    let n3Options = $state([]) as string[];
-    let appOptions = $state([]) as LevelNode[];
+    function getEntetiesWithRelationShips(): GraphData {
+        const leafType = getLabels()[getLabels().length - 1];
 
-    // Populate the options for the filters based on the data
-    function filterChildrenRecursively(node: LevelNode): LevelNode | undefined {
-        // ✅ If it's a leaf (not a group), keep it
-        if (!node.isGroup) return node;
+        const nodes = Data.nodes.filter((entity) => {
+            const label = entity.label || 'Unknown';
+            if (label === leafType) {
+                return true;
+            }
 
-        // ✅ If it's a group but has no children → discard it
-        if (!node.children || node.children.length === 0) return undefined;
+            const isASourceEntity = Data.relationships.some((relationship) => {
+                return relationship.from === entity.id;
+            });
+            return isASourceEntity;
+        });
 
-        // ✅ Recursively filter children
-        const filteredChildren = node.children
-            .map(filterChildrenRecursively)
-            .filter((n): n is LevelNode => !!n); // filter out nulls
+        const entityMap = Data.nodes.reduce((acc, entity) => {
+            acc[entity.id] = entity;
+            return acc;
+        }, {} as Record<string, Entity>);
 
-        // ❌ If none of the children survive, discard this node too
-        if (filteredChildren.length === 0) return undefined;
-
-        // ✅ Keep the node, with pruned children
         return {
-            ...node,
-            children: filteredChildren
-        };
+            nodes: nodes,
+            relationships: Data.relationships.filter((relationship) => {
+                const fromEntity = entityMap[relationship.from];
+                const toEntity = entityMap[relationship.to];
+                return fromEntity && toEntity;
+            })
+
+        }
+
     }
 
 
-    function filterTree(rootNode: LevelNode, filters: Filter, depth = 1): LevelNode | null {
-        const nameMatches =
-            (depth === 1 && filters.n1 === rootNode.name) ||
-            (depth === 2 && filters.n2 === rootNode.name) ||
-            (depth === 3 && filters.n3 === rootNode.name) ||
-            (depth === 4 && filters.app === rootNode.name);
+    function filterGraphData(filterByLabel: string) {
 
-        // Recurse into children conditionally:
-        let filteredChildren: LevelNode[] | undefined;
+        const labels = getLabels();
 
-        if (rootNode.children) {
-            // ✅ Only filter children if there's a deeper filter
-            const deeperFiltersExist =
-                (depth === 1 && (filters.n2 || filters.n3 || filters.app)) ||
-                (depth === 2 && (filters.n3 || filters.app)) ||
-                (depth === 3 && filters.app);
+        const filterLabelIdx = labels.indexOf(filterByLabel);
 
-            if (deeperFiltersExist || !nameMatches) {
-                filteredChildren = rootNode.children
-                    .map(child => filterTree(child, filters, depth + 1))
-                    .filter((c): c is LevelNode => !!c);
-            } else if (nameMatches) {
-                // ✅ Node matched and no deeper filters → keep all children
-                filteredChildren = rootNode.children;
+        // clear all filters after this label
+        for (let i = filterLabelIdx + 1; i < labels.length; i++) {
+            const label = labels[i];
+            if(filters.has(label)) {
+                filters.set(label, []);
             }
         }
 
-        const hasVisibleChildren = filteredChildren && filteredChildren.length > 0;
+        // if there's no filters applied for any label
 
-        if (nameMatches || hasVisibleChildren) {
-            return {
-                ...rootNode,
-                children: hasVisibleChildren ? filteredChildren : undefined
-            };
-        }
-
-        return null;
-    }
-
-    function filterGroupedData(changedFilter: string) {
-        switch (changedFilter) {
-            case 'n1':
-                filters.n2 = '';
-                filters.n3 = '';
-                filters.app = '';
-                break;
-            case 'n2':
-                filters.n3 = '';
-                filters.app = '';
-                break;
-            case 'n3':
-                filters.app = '';
-                break;
-        }
-
-        if(noFiltersApplied()) {
+        if(filters.values().every((v) => v.length === 0)) {
             if(!displayOps.displayEmpty){
-                console.log('displayEmpty', Data.length);
-                setFilteredData(Data.map(n1g => filterChildrenRecursively(n1g)).filter((n): n is LevelNode => !!n));
+                const nodesWithRelationships = getEntetiesWithRelationShips();
+                setFilteredData(nodesWithRelationships);
                 return;
             }
             setFilteredData(Data);
             return;
         }
 
+        const filteredData: GraphData = {
+            nodes: [],
+            relationships: []
+        };
 
 
-        const isAnyFilterSet = filters.n1 || filters.n2 || filters.n3 || filters.app;
+        const filteredNodes: Entity[] = Data.nodes.filter((entity) => {
+            const label = entity.label || 'Unknown';
+            const labelFilters = filters.get(label) || [];
+            const isLabelFiltered = labelFilters.length === 0 || labelFilters.includes(entity.name);
+            return isLabelFiltered;
+        });
 
-        const filteredData: LevelNode[] = isAnyFilterSet
-            ? Data.map(n1g => filterTree(n1g, filters))
-                .filter((n): n is LevelNode => !!n)
-            : Data;
+        filteredData.nodes = filteredNodes;
 
-
+        filteredData.relationships = Data.relationships.filter((relationship) => {
+            const fromEntity = filteredNodes.find((entity) => entity.id === relationship.from);
+            const toEntity = filteredNodes.find((entity) => entity.id === relationship.to);
+            return fromEntity && toEntity;
+        });
 
 
         // Update the options for the filters based on the filtered data
         console.log('filteredData', filteredData);
         setFilteredData(filteredData);
-
-        switch (changedFilter) {
-            case 'n1':
-                console.log('n1', filters.n1, filteredData);
-                n2Options = [...new Set(filteredData.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
-            case 'n2':
-                n3Options = [...new Set(filteredData.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
-            case 'n3':
-                appOptions = [...new Set(filteredData.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
-                    .filter((app) => !app?.isGroup)
-                    .filter(app => app !== undefined);
-            case 'app':
-                break;
-        }
 
 
     }
@@ -170,58 +114,84 @@
         console.log('DisplayOpsChanged', displayOps);
         console.log('DisplayOps', DisplayOps);
         if(DisplayOps.displayEmpty !== displayOps.displayEmpty) {
-            filterGroupedData('n1');
+            filterGraphData('n1');
         }
         
         DisplayOpsStore.set(displayOps);
 
     }
 
-
-
     function onClearData(){
         resetData();
         location.reload();
     }
 
-    function noFiltersApplied() {
-        return !filters.n1 && filters.n1.trim() === ''
-            && !filters.n2 && filters.n2.trim() === ''
-            && !filters.n3 && filters.n3.trim() === ''
-            && !filters.app && filters.app.trim() === '';
-    }
+    // function noFiltersApplied() {
+    //     return !filters.n1 && filters.n1.trim() === ''
+    //         && !filters.n2 && filters.n2.trim() === ''
+    //         && !filters.n3 && filters.n3.trim() === ''
+    //         && !filters.app && filters.app.trim() === '';
+    // }
 
     function resetOptions(){
-        n1Options = [...new Set(Data.map(n1g => n1g.name))];
-        n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
-        n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
-        appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
-            .filter(app => app !== undefined);
+        // n1Options = [...new Set(Data.map(n1g => n1g.name))];
+        // n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
+        // n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
+        // appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
+        //     .filter(app => app !== undefined);
 
     }
 
 
     function updateFiltering(){
-        if(noFiltersApplied()) {
+        if(filters.values().every((v) => v.length === 0)) {
             resetOptions();
             return;
         }
 
-        if (filters.n1 && filters.n1.trim() !== '') {
-            n2Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
-        } else {
-            n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name).filter((name): name is string => name !== undefined)))] as string[];
+        // if (filters.n1 && filters.n1.trim() !== '') {
+        //     n2Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
+        // } else {
+        //     n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name).filter((name): name is string => name !== undefined)))] as string[];
+        // }
+        // if (filters.n2 && filters.n2.trim() !== '') {
+        //     n3Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.map(n3g => n3g.name))) )] as string[];
+        // } else {
+        //     n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name))))] as string[];
+        // }
+        // if (filters.n3 && filters.n3.trim() !== '') {
+        //     appOptions = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.filter(n3g => n3g.name === filters.n3).flatMap(n3g => n3g.children))) )].filter(app => app !== undefined);
+        // } else {
+        //     appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children))))].filter(app => app !== undefined);
+        // }
+    }
+
+    function changeFiltering(event: Event, label: string) {
+        const target = event.target as HTMLInputElement;
+        const entityName = target.value;
+        const checked = target.checked;
+
+        if(!filters.has(label)) {
+            filters.set(label, []);
         }
-        if (filters.n2 && filters.n2.trim() !== '') {
-            n3Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.map(n3g => n3g.name))) )] as string[];
+        const labelFilters = filters.get(label) || [];
+
+        if (checked) {
+            if (labelFilters.includes(entityName)) {
+                console.log('value already exists', entityName);
+                return;
+            }
+
+            // Add the entity name to the filter for the label
+            filters.set(label, [...labelFilters, entityName]);
+            
         } else {
-            n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name))))] as string[];
+            filters.set(label, labelFilters.filter((v) => v !== entityName));
         }
-        if (filters.n3 && filters.n3.trim() !== '') {
-            appOptions = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.filter(n3g => n3g.name === filters.n3).flatMap(n3g => n3g.children))) )].filter(app => app !== undefined);
-        } else {
-            appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children))))].filter(app => app !== undefined);
-        }
+
+        console.log('filters', filters);
+
+        filterGraphData(label);
     }
 
 
@@ -235,9 +205,41 @@
 
     });
 
+    let sortedEnteties: Map<string, Entity[]> = $state(new Map<string, Entity[]>());
+
+    let filters: Map<string, string[]> = $state({} as Map<string, string[]>);
+
     onMount(() => {
         // Initialize the options for the filters based on the data
         updateFiltering();
+
+        const labels = getLabels();
+
+        // Order the map so that the keys are ordered in the same order as the labels array
+
+        const acc = Data.nodes.reduce((acc, entity) => {
+            const label = entity.label || 'Unknown';
+            if (!acc.has(label)) {
+                acc.set(label, []);
+            }
+            acc.get(label)?.push(entity);
+            return acc;
+        }, new Map<string, Entity[]>())
+
+        sortedEnteties = new Map([...acc.entries()].sort((a, b) => {
+            const indexA = labels.indexOf(a[0]);
+            const indexB = labels.indexOf(b[0]);
+            return indexA - indexB;
+        }));
+
+        // Map<string, string[]>
+        filters = new Map<string, string[]>();
+        for (const label of labels) {
+            filters.set(label, []);
+        }
+
+
+
     });
 
 
@@ -258,51 +260,25 @@
             <details name="filter-clmns" >
                 <summary role="button" class="outline">Filter columns</summary>
                 <ul>
-
-                    <li>
-                        <label>
-                            N1:
-                            <select bind:value={filters.n1} onchange={() => filterGroupedData('n1')}>
-                                <option value="">All</option>
-                                {#each n1Options as n1}
-                                    <option value={n1}>{n1}</option>
-                                {/each}
-                            </select>
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            N2:
-                            <select bind:value={filters.n2} onchange={() => filterGroupedData('n2')}>
-                                <option value="">All</option>
-                                {#each n2Options as n2}
-                                    <option value={n2}>{n2}</option>
-                                {/each}
-                            </select>
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            N3:
-                            <select bind:value={filters.n3} onchange={() => filterGroupedData('n3')}>
-                                <option value="">All</option>
-                                {#each n3Options as n3}
-                                    <option value={n3}>{n3}</option>
-                                {/each}
-                            </select>
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            App:
-                            <select bind:value={filters.app} onchange={() => filterGroupedData('app')}>
-                                <option value="">All</option>
-                                {#each appOptions as app}
-                                    <option value={app.name}>{app.name}</option>
-                                {/each}
-                            </select>
-                        </label>
-                    </li>
+                    {#each sortedEnteties as [label, entities]}
+                        <li>
+                            <details class="dropdown">
+                                <summary>
+                                    {label}: {filters.has(label) && (filters.get(label)?.length ?? 0) > 0 ? filters.get(label)?.join(', ') ?? 'All' : 'All'}
+                                </summary>
+                                <ul>
+                                    {#each entities as entity}
+                                    <li>
+                                        <label>
+                                            <input type="checkbox" name="{entity.name}" onchange={(e) => changeFiltering(e, label)} value={entity.name} checked={filters.get(label)?.includes(entity.name) ?? false} />
+                                            {entity.name}
+                                        </label>
+                                    </li>
+                                    {/each}
+                                </ul>
+                            </details>
+                        </li>
+                    {/each}
                 </ul>
             </details>
             <hr />
@@ -319,26 +295,13 @@
                             <em>If true, include models that doesn't have an application assigned.</em>
                         </small>
                     </li>
-                    <li>
-                        <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOps.showN1} onchange={DisplayOpsChanged} /> Show N1
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOps.showN2} onchange={DisplayOpsChanged}  /> Show N2
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOps.showN3} onchange={DisplayOpsChanged}  /> Show N3
-                        </label>
-                    </li>
-                    <li>
-                        <label>
-                            <input type="checkbox" role="switch" bind:checked={displayOps.showApps} onchange={DisplayOpsChanged}  /> Show App
-                        </label>
-                    </li>
+                    {#each getLabels() as label}
+                        <li>
+                            <label>
+                                <input type="checkbox" role="switch" bind:checked={displayOps.visibleLabels[getLabels().indexOf(label)]} onchange={DisplayOpsChanged} /> Show {label}
+                            </label>
+                        </li>
+                    {/each}
                 </ul>
             </details>
 

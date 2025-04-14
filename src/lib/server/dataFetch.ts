@@ -22,13 +22,13 @@ WITH
             id: n.id,
             name: n.name,
             label: head(labels(n)),
-            metadata: n
+            metadata: properties(n)
         },
         relationships: [r IN rels | {
             type: type(r),
             from: startNode(r).id,
             to: endNode(r).id,
-            metadata: r
+            metadata: properties(r)
         }]
     }
 RETURN 
@@ -67,8 +67,6 @@ RETURN
             });
             graphData.relationships.push(...relationships);
         });
-
-        console.log('Graph Data:', graphData);
 
         return graphData; // Relationships can be fetched separately if needed
     } catch (error) {
