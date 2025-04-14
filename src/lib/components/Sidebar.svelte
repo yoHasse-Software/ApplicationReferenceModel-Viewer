@@ -126,44 +126,11 @@
         location.reload();
     }
 
-    // function noFiltersApplied() {
-    //     return !filters.n1 && filters.n1.trim() === ''
-    //         && !filters.n2 && filters.n2.trim() === ''
-    //         && !filters.n3 && filters.n3.trim() === ''
-    //         && !filters.app && filters.app.trim() === '';
-    // }
-
-    function resetOptions(){
-        // n1Options = [...new Set(Data.map(n1g => n1g.name))];
-        // n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
-        // n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name).filter((name): name is string => name !== undefined) ?? []) ?? []))];
-        // appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children) ?? []) ?? []) ?? [])]
-        //     .filter(app => app !== undefined);
-
-    }
-
 
     function updateFiltering(){
         if(filters.values().every((v) => v.length === 0)) {
-            resetOptions();
             return;
         }
-
-        // if (filters.n1 && filters.n1.trim() !== '') {
-        //     n2Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.map(n2g => n2g.name) ?? []))];
-        // } else {
-        //     n2Options = [...new Set(Data.flatMap(n1g => n1g.children?.map(n2g => n2g.name).filter((name): name is string => name !== undefined)))] as string[];
-        // }
-        // if (filters.n2 && filters.n2.trim() !== '') {
-        //     n3Options = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.map(n3g => n3g.name))) )] as string[];
-        // } else {
-        //     n3Options = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.map(n3g => n3g.name))))] as string[];
-        // }
-        // if (filters.n3 && filters.n3.trim() !== '') {
-        //     appOptions = [...new Set(Data.filter(n1g => n1g.name === filters.n1).flatMap(n1g => n1g.children?.filter(n2g => n2g.name === filters.n2).flatMap(n2g => n2g.children?.filter(n3g => n3g.name === filters.n3).flatMap(n3g => n3g.children))) )].filter(app => app !== undefined);
-        // } else {
-        //     appOptions = [...new Set(Data.flatMap(n1g => n1g.children?.flatMap(n2g => n2g.children?.flatMap(n3g => n3g.children))))].filter(app => app !== undefined);
-        // }
     }
 
     function changeFiltering(event: Event, label: string) {
