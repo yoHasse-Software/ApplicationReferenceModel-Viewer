@@ -89,7 +89,7 @@ MATCH (a)-[r]->(b)
 WITH 
     head(labels(a)) AS from_label, 
     type(r) AS rel_type, 
-    head(labels(b)) AS to_label,
+    head(labels(b)) AS to_label
 RETURN DISTINCT from_label, rel_type, to_label
 ORDER BY from_label, rel_type, to_label;
 `;

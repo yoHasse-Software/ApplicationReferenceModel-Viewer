@@ -42,9 +42,8 @@ export function initData(): GraphData {
     const saved = localStorage.getItem(localStorageKey);
     if (saved) {
         const parsed = JSON.parse(saved) as GraphData;
-
-        setData(parsed); // Initialize DataStore with parsed data
-        setFilteredData(parsed); // Initialize FilterDataStore with parsed data
+        setData(parsed);
+        setFilteredData(parsed);
         return parsed;
     } else {
         return {
@@ -80,19 +79,23 @@ FilterDataStore.subscribe((value) => {
 
 
 
-let columnHeaders: string[] = $state([]);
+let labels: string[] = $state([]);
+
+export function initLabels(){
+  if (labels.length > 0) {
+      return labels;
+  } else {
+      labels = JSON.parse(localStorage.getItem(localStorageLabelsKey) || '[]');
+      return labels;
+  }
+}
 export function getLabels() {
-    if (columnHeaders.length > 0) {
-        return columnHeaders;
-    } else {
-        columnHeaders = JSON.parse(localStorage.getItem(localStorageLabelsKey) || '[]');
-        return columnHeaders;
-    }
+    return labels;
 }
 
-export function setLabels(newHeaders: string[]) {
-    columnHeaders = newHeaders;
-    localStorage.setItem(localStorageLabelsKey, JSON.stringify(columnHeaders));
+export function setLabels(newLabels: string[]) {
+    labels = newLabels;
+    localStorage.setItem(localStorageLabelsKey, JSON.stringify(labels));
 }
 
 export const DisplayOpsStore = writable<DisplayOptions>({

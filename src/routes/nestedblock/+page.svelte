@@ -3,8 +3,8 @@
     import Sidebar from '$lib/components/Sidebar.svelte';
     import { type AppSoftware, type RelationShip, type GroupLevel, type LevelNode, type GraphData, type Entity, type NodeRelation } from '$lib/types';
     import ConditionalFormatDialogue from '$lib/components/ConditionalFormatDialogue.svelte';
-    import HierarchyDiagram from '$lib/components/HierarchyDiagram.svelte';
-    import { FilteredData, initConditionalFormattingRules, initData, setLabels, setData } from '$lib/datastore.svelte';
+    import NestedBlockDiagram from '$lib/components/NestedBlockDiagram.svelte';
+    import { FilteredData, initConditionalFormattingRules, initData, setLabels, setData, initLabels } from '$lib/datastore.svelte';
     import * as Papa from 'papaparse';
     
     // Example grouped data based on your CSV
@@ -16,7 +16,7 @@
     let labels: string[] = $state([]);
     let labelConstrains: NodeRelation[] = $state([]);
     let loadType = $state("csv" as "csv" | "db");
-    let selectedLabels: string[] = $state([]);
+    let selectedLabels: string[] = $state([""]);
     let showLabelSelector = $state(false);
     let csvIdentityLabel: string = $state("name" as string);
 
@@ -113,6 +113,7 @@
     }
 
     async function loadFromDb(){
+        console.log("Loading from DB with labels:", selectedLabels);
         const labelParamQuery = "labels=" + selectedLabels.join(',');
         const dataResponse = await fetch(`/api/graph/?${labelParamQuery}`, {
             method: 'GET',
@@ -136,17 +137,19 @@
     }
 
     async function confirmColumnSelection() {
-        if (selectedLabels.length === 0) {
+        if (selectedLabels.length === 0 || selectedLabels.some(label => label === "")) {
             alert('Please select all columns.');
             return;
         }
+
+        setLabels(selectedLabels);
 
         if(loadType === "csv"){
             loadCsv();
         }
 
         else if(loadType === "db"){
-            loadFromDb();
+            await loadFromDb();
         }
 
         showLabelSelector = false;
@@ -175,26 +178,72 @@
         }
         const relationShips = await getRelationShips.json() as NodeRelation[];
 
+        console.log()
+
         labels = relationShips.flatMap(relation => {
             const fromLabel = relation.fromLabel;
             const toLabel = relation.toLabel;
             return [fromLabel, toLabel];
         });
+
         labels = [...new Set(labels)];
         labelConstrains = relationShips;
 
         showLabelSelector = true;
     }
 
+    function getLabelOptions(index: number){
+        console.log('getfor', index, loadType);
+        if(loadType === 'csv'){
+            return labels;
+        }
+        
+        if(loadType === 'db'){
+            if (index === 0) {
+                return labels;
+            }
+            console.log(selectedLabels[index - 1]);
+            const labelOptions = labelConstrains
+                .filter((relation) => relation.fromLabel === selectedLabels[index - 1])
+                .map((relation) => relation.toLabel);
+
+            console.log('labelOptions', labelOptions);
+
+            return [...new Set(labelOptions)];
+        }
+
+        return [];
+    }
+
+    const canAddLabel = () => {
+        if(selectedLabels.length >= 5) {
+            console.error('Maximum number of labels reached.');
+            return false;
+        }
+
+        if(selectedLabels.length === 1){
+            return true;
+        }
+        const lastLabel = selectedLabels.length > 2 ? selectedLabels[selectedLabels.length - 2] : selectedLabels[0];
+        if (lastLabel === "" && selectedLabels.length > 1) {
+            console.error('Last label is empty. Please select a label.', selectedLabels);
+            return false;
+        }
+        
+        const labelOptions = getLabelOptions(selectedLabels.length-1);
+
+        if (labelOptions.length === 0) {
+            console.error('No more labels available for selection. Based on relationship constraints.', selectedLabels);
+            return false;
+        }
+        return labelOptions.length > 0;
+    };
+
 
     onMount(async () => {
         initData();
         initConditionalFormattingRules();
-
-
-        selectedLabels = ["ApplicationArea", "ApplicationGroup","Application","Software"];
-        await loadFromDb();
-
+        initLabels();
     });
   </script>
 
@@ -222,10 +271,9 @@
         </article>
     </main>
     {:else}
-    <div>
+    <div >
         <h3>Select Labels</h3>
         {#if loadType === "csv"}
-            <!-- identityLabel -->
              Select identity label:
             <select bind:value={csvIdentityLabel}>
                 <option value="" selected>Select identity label</option>
@@ -237,17 +285,36 @@
         {/if}
         {#each selectedLabels as labelName, idx}
             <label>
-            {labelName}:
-            <select bind:value={selectedLabels[idx]}>
-                <option value="" selected>Select {labelName}</option>
-            {#each labels as col}
-                <option value={col}>{col}</option>
-            {/each}
-            </select>
+                Level {idx+1}:
+                <div role="group">
+
+                <select bind:value={selectedLabels[idx]}>
+                    <option value="" selected>Select for level {idx+1}</option>
+                {#each getLabelOptions(idx) as col}
+                    <option value={col}>{col}</option>
+                {/each}
+                </select>
+                <button type="button" onclick={() => selectedLabels.splice(idx, 1)} disabled={selectedLabels.length <= 1 ? true : null} aria-label="remove label">
+                    <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-trash"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                </button>
+                </div>
+
             </label>
         {/each}
-        <button onclick={() => selectedLabels.push('')} disabled={selectedLabels.length >= 5 ? true : null}>Add Label</button>
-        <button onclick={confirmColumnSelection}>Load Data</button>
+        {#if !canAddLabel()}
+            <span style="color: red;">
+                {#if getLabelOptions(selectedLabels.length).length === 0}
+                    No more labels available for selection. Based on relationship constraints.
+                {:else}
+                    Maximum number of labels reached.
+                {/if}
+            </span>
+        {/if}
+        <div role="group">
+            <button class="outline" onclick={() => selectedLabels.push('')} disabled={!canAddLabel() ? true : null}>Add Label</button>
+            <button onclick={async () => await confirmColumnSelection()}>Load Data</button>
+        </div>
+
     </div>
     {/if}
 
@@ -265,7 +332,7 @@
     onConditionalFormatDialogueOpen={() => isConditionalFormatingDialogueOpen = true} />
     
     <h1>Tillämpningsarkitekturen</h1>
-    <HierarchyDiagram  />
+    <NestedBlockDiagram  />
   {/if}
 
 

@@ -22,6 +22,14 @@ export type Entity = {
     };
 }
 
+export type BlockNode = Entity & {
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+    children?: BlockNode[];
+};
+
 
 export type RelationShip = {
     from: string;

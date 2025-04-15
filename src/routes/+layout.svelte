@@ -5,8 +5,15 @@
 
 </script>
 
-<main  class:container={Data.length === 0} class:container-fluid={Data.length > 0} >
+<main  class:container={Data.nodes.length === 0} class:container-fluid={Data.nodes.length > 0} >
     <div id="content">
       {@render children()}
     </div>
 </main>
+
+
+<style>
+  .container {
+    margin-top: 2rem;
+  }
+</style>

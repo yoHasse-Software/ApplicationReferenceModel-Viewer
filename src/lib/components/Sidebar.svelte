@@ -1,7 +1,7 @@
 
 <script lang="ts">
-    import { Data, setFilteredData, setData, resetData, DisplayOpsStore, DisplayOps, getLabels } from "$lib/datastore.svelte";
-    import { type DisplayOptions, type Entity, type GraphData, type LevelNode } from "$lib/types";
+    import { Data, setFilteredData, resetData, DisplayOpsStore, DisplayOps, getLabels } from "$lib/datastore.svelte";
+    import { type DisplayOptions, type Entity, type GraphData } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
 
@@ -12,6 +12,8 @@
     } = $props();
 
     let isSidebarVisible = $state(true);
+    let sortedEnteties: Map<string, Entity[]> = $state(new Map<string, Entity[]>());
+    let filters: Map<string, string[]> = $state(new Map<string, string[]>);
 
     export function toggleSideBar() {
         isSidebarVisible = !isSidebarVisible;
@@ -70,6 +72,7 @@
         }
 
         // if there's no filters applied for any label
+
 
         if(filters.values().every((v) => v.length === 0)) {
             if(!displayOps.displayEmpty){
@@ -172,9 +175,7 @@
 
     });
 
-    let sortedEnteties: Map<string, Entity[]> = $state(new Map<string, Entity[]>());
 
-    let filters: Map<string, string[]> = $state({} as Map<string, string[]>);
 
     onMount(() => {
         // Initialize the options for the filters based on the data
@@ -184,6 +185,7 @@
 
         // Order the map so that the keys are ordered in the same order as the labels array
 
+        $inspect("Starting");
         const acc = Data.nodes.reduce((acc, entity) => {
             const label = entity.label || 'Unknown';
             if (!acc.has(label)) {
@@ -199,13 +201,10 @@
             return indexA - indexB;
         }));
 
-        // Map<string, string[]>
         filters = new Map<string, string[]>();
         for (const label of labels) {
             filters.set(label, []);
         }
-
-
 
     });
 
