@@ -10,7 +10,7 @@
     // Example grouped data based on your CSV
     let isConditionalFormatingDialogueOpen = $state(false);
 
-    let sideBarComponent = $state() as Sidebar;
+    let sideBarComponent: Sidebar;
 
     let rawCsvRows: Array<Record<string, string>> = $state([]);
     let labels: string[] = $state([]);
@@ -396,20 +396,12 @@
 
   {/if}
 
+
   {#if FilteredData.nodes.length > 0}
-
-    <ConditionalFormatDialogue 
-    isOpen={isConditionalFormatingDialogueOpen}
-    onClose={() => closeFormatDialogue()} />
-
-
-    <Sidebar 
-    bind:this={sideBarComponent}
-    onConditionalFormatDialogueOpen={() => isConditionalFormatingDialogueOpen = true} />
-    
     <h1>Tillämpningsarkitekturen</h1>
     <NestedBlockDiagram  />
   {/if}
+  
 
 
 <style>

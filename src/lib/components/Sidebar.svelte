@@ -317,6 +317,8 @@
         top: 0;
         left: 0;
         height: 100%;
+        z-index: 1000;
+
     }
 
     .sidebar-container>button {
@@ -338,7 +340,7 @@
         background-color: #f4f4f4;
         padding: 20px;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
+        overflow-y: auto;
     }
 
 </style>

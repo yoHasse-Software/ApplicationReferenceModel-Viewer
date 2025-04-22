@@ -87,10 +87,8 @@ FilterDataStore.subscribe((value) => {
     console.log('No filtered data available. Using original data.', value?.nodes?.length );
     return;
   }
-  
   FilteredData.nodes = value.nodes; // Set new nodes
   FilteredData.relationships = value.relationships; // Set new relationships
-  console.log('Filtered data updated:', FilteredData.nodes.length, FilteredData.relationships.length);
 });  
 
 let labels: string[] = $state([]);
@@ -155,7 +153,6 @@ DisplayOpsStore.subscribe((value) => {
   DisplayOps.visibleLabels = value.visibleLabels;
   DisplayOps.displayEmpty = value.displayEmpty;
   DisplayOps.columns = value.columns;
-  console.log('Display options updated:', DisplayOps.visibleLabels, DisplayOps.displayEmpty, DisplayOps.columns);
 });
 
 export let DimensionMap = new SvelteMap<string, {height: number, width: number}>();
@@ -257,8 +254,6 @@ export function getConditionalRules(node: Entity): ConditionalFormatting[] {
       return []; // No rules matched
     }
     
-
-
     console.log(condRules, 'condRules', 'getConditionalRules');
 
     return condRules ?? [];
