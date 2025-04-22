@@ -2,12 +2,11 @@
 
 
 <script lang="ts">
+    import { Data } from "$lib/datastore.svelte";
     import { SimulationLink, SimulationNode } from "$lib/models/SimulationNode";
-    import type { GraphData } from "$lib/types";
-    import d3, { type SimulationNodeDatum } from "d3";
+    import * as d3 from 'd3';
     import { onMount } from "svelte";
 
-    const { data }: { data:GraphData } = $props();
 
     let svgContainer: SVGSVGElement;
 
@@ -20,10 +19,10 @@
 
         // The force simulation mutates links and nodes, so create a copy
         // so that re-evaluating this cell produces the same result.
-        const links = data.relationships.map(d => {
+        const links = Data.relationships.map(d => {
 
-            const from = data.nodes.find(node => node.id === d.from);
-            const to = data.nodes.find(node => node.id === d.to);
+            const from = Data.nodes.find(node => node.id === d.from);
+            const to = Data.nodes.find(node => node.id === d.to);
             if (!from || !to) {
                 throw new Error(`Node not found for id: ${d.from} or ${d.to}`);
             }
@@ -34,7 +33,7 @@
             return new SimulationLink(fromNode, toNode, d.metadata)
 
         });
-        const nodes = data.nodes.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
+        const nodes = Data.nodes.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
 
         
 
@@ -46,14 +45,9 @@
             .force("y", d3.forceY());
 
         // Create the SVG container.
-        const svg = d3.create("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", [-width / 2, -height / 2, width, height])
-            .attr("style", "max-width: 100%; height: auto;");
 
         // Add a line for each link, and a circle for each node.
-        const link = svg.append("g")
+        const link = d3.select(svgContainer).append("g")
             .attr("stroke", "#999")
             .attr("stroke-opacity", 0.6)
             .selectAll("line")
@@ -61,7 +55,7 @@
             .join("line")
             .attr("stroke-width", d => Math.sqrt(d.value));
 
-        const node = svg.append("g")
+        const node = d3.select(svgContainer).append("g")
             .attr("stroke", "#fff")
             .attr("stroke-width", 1.5)
             .selectAll("circle")
@@ -119,19 +113,12 @@
         // stop naturally, but it’s a good practice.)
         // invalidation.then(() => simulation.stop());
 
-        return svg.node();
     }
 
 
       // Specify the dimensions of the chart.
     onMount(() => {
-
-        // Create the SVG container and set the dimensions.
-        const svg = createSimulationNodes();
-        if (svgContainer && svg) {
-            svgContainer.appendChild(svg);
-        }
-
+        const svg = d3.select(svgContainer);
     });
 
 

@@ -78,3 +78,9 @@
         max-width: 1450px;
     }
 }
+
+
+.required::after {
+  color: red;
+  content: '* ';
+}

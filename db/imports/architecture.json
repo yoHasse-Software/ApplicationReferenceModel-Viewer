@@ -7020,16 +7020,6 @@
       }
     },
     {
-      "id": "5328B967BBF2",
-      "name": "Alumni",
-      "label": "Application",
-      "metadata": {
-        "beskrivning": "2023-04-13: Bytt namn från Amlumnadministration",
-        "parentid": "group_40",
-        "ext_id": "49"
-      }
-    },
-    {
       "id": "B9D23409FBDA",
       "name": "Enhetshantering",
       "label": "Application",
@@ -7458,16 +7448,6 @@
       }
     },
     {
-      "id": "7684AD500FE5",
-      "name": "Beredskap",
-      "label": "Application",
-      "metadata": {
-        "beskrivning": "Planering och hantering av beredskap för t.ex. IT-tjänster",
-        "parentid": "group_45",
-        "ext_id": "153"
-      }
-    },
-    {
       "id": "46793325CF76",
       "name": "Ordbehandling",
       "label": "Application",
@@ -7532,15 +7512,6 @@
       }
     },
     {
-      "id": "796A78522098",
-      "name": "Stipendier",
-      "label": "Application",
-      "metadata": {
-        "parentid": "group_4",
-        "ext_id": "163"
-      }
-    },
-    {
       "id": "B56B470161DF",
       "name": "LMS/LME",
       "label": "Application",
@@ -7557,15 +7528,6 @@
       "metadata": {
         "parentid": "group_4",
         "ext_id": "165"
-      }
-    },
-    {
-      "id": "796A78522098",
-      "name": "Stipendier",
-      "label": "Application",
-      "metadata": {
-        "parentid": "group_4",
-        "ext_id": "166"
       }
     },
     {
@@ -7712,15 +7674,6 @@
       "metadata": {
         "parentid": "group_24",
         "ext_id": "183"
-      }
-    },
-    {
-      "id": "5328B967BBF2",
-      "name": "Alumni",
-      "label": "Application",
-      "metadata": {
-        "parentid": "group_24",
-        "ext_id": "184"
       }
     },
     {
@@ -7966,15 +7919,6 @@
       }
     },
     {
-      "id": "7684AD500FE5",
-      "name": "Beredskap",
-      "label": "Application",
-      "metadata": {
-        "parentid": "group_45",
-        "ext_id": "211"
-      }
-    },
-    {
       "id": "5C1334AFB636",
       "name": "Telefonabonnemang",
       "label": "Application",
@@ -8119,6 +8063,62 @@
         "beskrivning": "Visual Arkiv",
         "parentid": "group_19",
         "ext_id": "228"
+      }
+    },
+    {
+      "id": "8FF1E3BA5ED2",
+      "name": "Alumni",
+      "label": "Application",
+      "metadata": {
+        "beskrivning": "2023-04-13: Bytt namn från Amlumnadministration",
+        "parentid": "group_40",
+        "ext_id": "49"
+      }
+    },
+    {
+      "id": "7536D9DBCD6D",
+      "name": "Alumni",
+      "label": "Application",
+      "metadata": {
+        "parentid": "group_24",
+        "ext_id": "184"
+      }
+    },
+    {
+      "id": "B3902E9C69EE",
+      "name": "Beredskap",
+      "label": "Application",
+      "metadata": {
+        "beskrivning": "Planering och hantering av beredskap för t.ex. IT-tjänster",
+        "parentid": "group_45",
+        "ext_id": "153"
+      }
+    },
+    {
+      "id": "7E0B09C84860",
+      "name": "Beredskap",
+      "label": "Application",
+      "metadata": {
+        "parentid": "group_45",
+        "ext_id": "211"
+      }
+    },
+    {
+      "id": "75E533C41A3A",
+      "name": "Stipendier",
+      "label": "Application",
+      "metadata": {
+        "parentid": "group_4",
+        "ext_id": "163"
+      }
+    },
+    {
+      "id": "CA389156873C",
+      "name": "Stipendier",
+      "label": "Application",
+      "metadata": {
+        "parentid": "group_4",
+        "ext_id": "166"
       }
     }
   ],
@@ -30714,16 +30714,6 @@
       }
     },
     {
-      "id": "9A4600D6B14A5328B967BBF2CONTAINS",
-      "from": "9A4600D6B14A",
-      "to": "5328B967BBF2",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
       "id": "F42C062E21A2B9D23409FBDACONTAINS",
       "from": "F42C062E21A2",
       "to": "B9D23409FBDA",
@@ -31164,16 +31154,6 @@
       }
     },
     {
-      "id": "6574025B6A917684AD500FE5CONTAINS",
-      "from": "6574025B6A91",
-      "to": "7684AD500FE5",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
       "id": "B29C0350DF2146793325CF76CONTAINS",
       "from": "B29C0350DF21",
       "to": "46793325CF76",
@@ -31244,16 +31224,6 @@
       }
     },
     {
-      "id": "14BED48C764E796A78522098CONTAINS",
-      "from": "14BED48C764E",
-      "to": "796A78522098",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
       "id": "14BED48C764EB56B470161DFCONTAINS",
       "from": "14BED48C764E",
       "to": "B56B470161DF",
@@ -31267,16 +31237,6 @@
       "id": "14BED48C764E856FDD591AC6CONTAINS",
       "from": "14BED48C764E",
       "to": "856FDD591AC6",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
-      "id": "14BED48C764E796A78522098CONTAINS",
-      "from": "14BED48C764E",
-      "to": "796A78522098",
       "type": "CONTAINS",
       "metadata": {
         "from_label": "ApplicationGroup",
@@ -31437,16 +31397,6 @@
       "id": "1D1A16253F069091DB3E8E6ECONTAINS",
       "from": "1D1A16253F06",
       "to": "9091DB3E8E6E",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
-      "id": "1D1A16253F065328B967BBF2CONTAINS",
-      "from": "1D1A16253F06",
-      "to": "5328B967BBF2",
       "type": "CONTAINS",
       "metadata": {
         "from_label": "ApplicationGroup",
@@ -31714,16 +31664,6 @@
       }
     },
     {
-      "id": "6574025B6A917684AD500FE5CONTAINS",
-      "from": "6574025B6A91",
-      "to": "7684AD500FE5",
-      "type": "CONTAINS",
-      "metadata": {
-        "from_label": "ApplicationGroup",
-        "to_label": "Application"
-      }
-    },
-    {
       "id": "852589F768D95C1334AFB636CONTAINS",
       "from": "852589F768D9",
       "to": "5C1334AFB636",
@@ -31877,6 +31817,66 @@
       "id": "5BB27C3AE28D130D4673B2D4CONTAINS",
       "from": "5BB27C3AE28D",
       "to": "130D4673B2D4",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "9A4600D6B14A8FF1E3BA5ED2CONTAINS",
+      "from": "9A4600D6B14A",
+      "to": "8FF1E3BA5ED2",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "1D1A16253F067536D9DBCD6DCONTAINS",
+      "from": "1D1A16253F06",
+      "to": "7536D9DBCD6D",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "6574025B6A91B3902E9C69EECONTAINS",
+      "from": "6574025B6A91",
+      "to": "B3902E9C69EE",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "6574025B6A917E0B09C84860CONTAINS",
+      "from": "6574025B6A91",
+      "to": "7E0B09C84860",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "14BED48C764E75E533C41A3ACONTAINS",
+      "from": "14BED48C764E",
+      "to": "75E533C41A3A",
+      "type": "CONTAINS",
+      "metadata": {
+        "from_label": "ApplicationGroup",
+        "to_label": "Application"
+      }
+    },
+    {
+      "id": "14BED48C764ECA389156873CCONTAINS",
+      "from": "14BED48C764E",
+      "to": "CA389156873C",
       "type": "CONTAINS",
       "metadata": {
         "from_label": "ApplicationGroup",
@@ -32454,9 +32454,9 @@
       }
     },
     {
-      "id": "F38C5B3A8DB97684AD500FE5SUPPORTS",
+      "id": "F38C5B3A8DB9B3902E9C69EESUPPORTS",
       "from": "F38C5B3A8DB9",
-      "to": "7684AD500FE5",
+      "to": "B3902E9C69EE",
       "type": "SUPPORTS",
       "metadata": {
         "from_label": "BIT",

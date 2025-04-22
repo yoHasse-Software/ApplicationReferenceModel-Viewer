@@ -1,135 +1,240 @@
+
 <script lang="ts">
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
     import type { BlockNode, Entity, GraphData, RelationShip } from '$lib/types';
-    import { ConditionalFormattingRules, DisplayOps, DisplayOpsStore, FilterDataStore, FilteredData, getLabels } from '$lib/datastore.svelte';
-    import Block from './Block.svelte';
+    import { ConditionalFormattingStore, DisplayOps, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getLabels } from '$lib/datastore.svelte';
+    import { wrap } from '$lib/d3Utils';
+    import { SvelteMap } from 'svelte/reactivity';
+    import { getPicoColors } from '$lib/colorUtils';
 
   
     let svgContainer: SVGSVGElement;
     let groupContainer: SVGGElement;
+    let minimap: HTMLDivElement;
+    
 
-    const nodeMinWidth = 400; // initial width of child nodes
-    const nodeMinHeight = 50; // initial height of child nodes
-    const labelOffset = 24;
-    const labelPadding = 4; // padding for label text
+    const fontSettings = {
+        fontSize: 24,
+        fontFamily: 'Arial, sans-serif',
+        fontWeight: 'normal'
+    }
+    const titleMargin = {
+        top: 10,
+        bottom: 10,
+        right: 10,
+        left: 10
+    }
 
-    const columns = 4;
-
-
-    const nodePadding = {
+    const nodeMargin = {
         top: 20,
-        right: 20,
         bottom: 20,
+        right: 20,
         left: 20
     }
 
-    const nodePaddingX = nodePadding.left + nodePadding.right;
-    const nodePaddingY = nodePadding.top + nodePadding.bottom;
+    const nodeMarginY = nodeMargin.top + nodeMargin.bottom;
+    const labelMarginY = titleMargin.top + titleMargin.bottom;
+    const nodePaddingY = nodeMarginY + labelMarginY + fontSettings.fontSize; // Padding between nodes
+
+
+    const nodeMinWidth = fontSettings.fontSize * 16.6 ; // initial width of child nodes
+    const nodeMinHeight = fontSettings.fontSize * 2; // initial height of child nodes
+
+    const colors = new SvelteMap<string, string[]>();
+
+    
 
 
     $effect(() => {
-        DisplayOps;
-        ConditionalFormattingRules;
-
+        
     });
 
-    let heights: number[] = $state([]);
-    let refs: HTMLDivElement[] = $state([]);
+    function computeSize(node: BlockNode): { width: number, height: number } {
+      const levelRvsIdx = (getLabels().toReversed().indexOf(node.label) + 1);
+      const levelMinheight = nodeMinHeight * levelRvsIdx; // Minimum width based on the level of the node
+      const levelMinWidth = nodeMinWidth * levelRvsIdx; // Minimum width based on the level of the node
+
+      const debug = getLabels().toReversed()[levelRvsIdx-2];
+
+      $inspect('dbug', node.label, debug);
+
+      if(!node || !node.children || node.children.length === 0) {
+        // Get the potential width of children
+        const childWidth =  levelRvsIdx - 2 > 0 ? nodeMinWidth * (levelRvsIdx-2) : nodeMinWidth; // Minimum width based on the level of the node
+        node.width = childWidth;
+        node.height = levelMinheight; // Set the height of the node to the minimum height
+        return { width: childWidth, height: levelMinheight };
+      }
 
 
-    function calculateNodeWidthAndHeight(node: BlockNode, totalWidth: number, totalHeight: number): { width: number, height: number } {
-      
-        const childrenCalculation = node.children?.map(child => {
-          const calculated = calculateNodeWidthAndHeight(child, totalWidth, totalHeight)
-          child.width = calculated.width;
-          child.height = calculated.height;
-          return calculated;
-        }).reduce(({accWidht, accHeight}, val) => ({
-            accWidht: accWidht + val.width,
-            accHeight: accHeight + val.height
-          }), { accWidht: 0, accHeight: 0 }) || { accWidht: 0, accHeight: 0 };
+      let totalWidth = 0;
+      let totalHeight = 0;
 
-        const currentLevel = getLabels().indexOf(node.label) || 0;
-        if(currentLevel === getLabels().length - 2){
-          // Calculate width based on children devided by columns and height based on the number of children
-          const childrenWidth = Math.max(nodeMinWidth, childrenCalculation.accWidht / columns) + nodeMinWidth; // Ensure minimum width
-          const childrenHeight = Math.max(nodeMinHeight, childrenCalculation.accHeight) + nodeMinHeight; // Ensure minimum height
-          return { width: childrenWidth, height: childrenHeight };
+      const childHeights = new Map<string, number>(); // Map to store the heights of each row group
+      const childLabel = node.children[0].label || ""; // Get the label of the first child node
+      const childColumns = DisplayOps.columns[childLabel] || 1; // Get the number of columns for the child node label
+
+      node.children.forEach((child, idx) => {
+        const childSize = computeSize(child);
+        if(childColumns > idx){ // Stop adding width if we have reached the max columns
+          totalWidth += childSize.width + nodeMargin.left; // Add padding between nodes
         }
+        childHeights.set(child.id, childSize.height); // Store the height of the child node
+      });
 
-        const width = Math.max(nodeMinWidth, childrenCalculation.accWidht + nodeMinWidth) + nodePaddingX; // Ensure minimum width
-        const height = Math.max(nodeMinHeight, childrenCalculation.accHeight + nodeMinHeight) + nodePaddingY; // Ensure minimum height
+      // 1. Group the children by their row index
+      const rows = Math.ceil(node.children.length / childColumns); // Calculate the number of rows based on the number of columns
+      const rowGroups = Array.from({ length: rows }, (_, i) => node.children?.slice(i * childColumns, (i + 1) * childColumns));
 
-        return { width, height };
+      // 2. Calculate the max height for each row group
+      const rowHeights = rowGroups.map(row => {
+        if (!row) return 0;
+        return Math.max(...row.map((child, idx) => {
+          const childNodeHeight = childHeights.get(child.id) || 0; // Get the height of the child node from the map
+          return childNodeHeight; // Add padding between rows
+        }));
+      });
+
+      // 3. Set the height of each child node to the max height of its row group
+      node.children.forEach((child, idx) => {
+        const rowIndex = Math.floor(idx / childColumns);
+        const rowHeight = rowHeights[rowIndex] || 0;
+        child.height = rowHeight; // Set the height of the child node to the max height of its row group
+      });
+
+      // 4. Set the total height of the node to the sum of the row heights
+      totalHeight = rowHeights.reduce((acc, height) => acc + height + nodeMargin.top, 0) - nodeMargin.top; // Add padding between rows
+      totalHeight += nodePaddingY; // Add padding for the label and header
+      
+
+      totalWidth += nodeMargin.left; // Remove padding from the last child
+
+      node.width = Math.max(nodeMinWidth, totalWidth); 
+      node.height = Math.max(levelMinheight, totalHeight);
+
+
+      return {
+        width: Math.max(nodeMinWidth, totalWidth),
+        height: Math.max(levelMinheight, totalHeight) 
+      };
+      
+
+    }
+
+    function computePosition(node: BlockNode, parentNode: BlockNode, previousNode: BlockNode | undefined = undefined) {
+
+      const isRoot = parentNode.id === 'root'; // Check if the node is a root node
+      const thisIndex = parentNode.children!.findIndex(n => n.id === node.id); // Get the index of the current node in the parent's children array
+      const nodeColumns = DisplayOps.columns[node.label] || 1; // Get the number of columns for the node label
+
+      const newRow = thisIndex % nodeColumns === 0; // Check if the current node is the first in a new row
+
+      const xPos = () => {
+        if(!previousNode){
+          return isRoot ? 0 : nodeMargin.left; // First node in the row, set x to 0
+        }
+        if (isRoot) {
+          return newRow ? 0 : previousNode.x + previousNode.width + nodeMargin.left; // Root node is always at x = 0
+        } else if (newRow) {
+          return nodeMargin.left; // reset
+        } else {
+          return previousNode.x + previousNode.width + nodeMargin.left; // Same row, position at the same x as the previous node
+        }
+      };
+
+      const yPos = () => {
+        if(!previousNode){
+          return nodeMargin.top + labelMarginY + fontSettings.fontSize; // First node in the row, set y to 0
+        }
+        if (isRoot) {
+          return newRow ? previousNode.y + previousNode.height + nodeMargin.top : previousNode.y; // Root node is always at y = 0
+        } else if (newRow) {
+          return previousNode.y + previousNode.height + nodeMargin.top; // New row, position below the previous node
+        } else {
+          return previousNode.y; // Same row, position at the same y as the previous node
+        }
+      };
+
+      node.x = xPos(); // Set the x position of the node
+      node.y = yPos(); // Set the y position of the node to be the same as the previous node
+
+      if(!node.children){
+        return;
+      }
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const previousChild = i > 0 ? node.children[i - 1] : undefined; // Get the previous child node
+
+        computePosition(child, node, previousChild);
+      }
+
     }
 
     function buildHierarchy(nodes: Entity[], relationships: RelationShip[]) {
       const nodeMap = new Map(nodes.map(n => [n.id, { ...n, children: [] as BlockNode[], width: nodeMinWidth, height: nodeMinHeight, x: 0, y: 0 }]));
 
       relationships.forEach(rel => {
-        const parent = nodeMap.get(rel.from);
-        const child = nodeMap.get(rel.to);
+        const from = rel.type !== "SUPPORTS" ? rel.from : rel.to; // Get the from node based on the relationship type
+        const to = rel.type !== "SUPPORTS" ? rel.to : rel.from; // Get the to node based on the relationship type
+
+        const parent = nodeMap.get(from);
+        const child = nodeMap.get(to);
         if (parent && child) {
           if(parent.children.some(c => c.id === child.id)) {
-            $inspect("child already exists", child, parent.children); // Debugging line to check if the child already exists
-            return; // Avoid adding the same child again
+            return; 
           }
           parent.children.push(child);
         }
       });
 
       const roots = Array.from(nodeMap.values())
-        .filter(n => n.label === getLabels()[0])
-        .map(n => {
-          const {width, height} = calculateNodeWidthAndHeight(n, nodeMinWidth, nodeMinHeight);
+        .filter(n => n.label === getLabels()[0]);
 
-          n.width = width;
-          n.height = height;
-          return n;
-        }) as BlockNode[];
+      const fakeRoot = {
+        id: 'root',
+        name: 'Root',
+        label: 'Root',
+        metadata: {},
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+        children: roots
+      };
+
+      computeSize(fakeRoot); // Compute the size of the fake root node
+      for (let index = 0; index < fakeRoot.children.length; index++) {
+        const child = fakeRoot.children[index];
+        const previousChild = index > 0 ? fakeRoot.children[index - 1] : undefined; // Get the previous child node
+        computePosition(child, fakeRoot, previousChild); // Compute the position of the child node
+      }
 
       // just return the root nodes
       return roots;
     }
 
-    const levelColors = [
-      '#FFDDC1', // Level 0
-      '#FFABAB', // Level 1
-      '#FFC3A0', // Level 2
-      '#FF677D', // Level 3
-      '#D4A5A5', // Level 4
-      '#392F5A'  // Level 5
-    ];
 
 
-    function drawNode(node: BlockNode, parentGroup: d3.Selection<SVGGElement, unknown, null, undefined>, isRoot: boolean = false, previousNode: BlockNode | undefined = undefined) {
-
+    function drawNode(node: BlockNode, parentGroup: d3.Selection<SVGGElement, unknown, null, undefined>, isRoot: boolean = false, previousNode: BlockNode | undefined = undefined, childIndex = -1) {
       const level = getLabels().indexOf(node.label) || 0;
-      const sameLabel = previousNode ? node.label === previousNode.label : false;
+      const isLeaf = level === getLabels().length - 1;
+
+      const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
+      const textColor =  isLeaf ? colors.get('contrastInverse') : level % 2 === 0 ? colors.get('contrastInverse') : colors.get('secondary');
+
+      const conditionalFormatting = getConditionalRules(node);
+
+      const textContent = conditionalFormatting.filter(rule => rule.styling.content)
+        .map(rule => rule.styling.content).join(' ');
+
+      const bgColor = conditionalFormatting.findLast(rule => rule.styling.backgroundColor.isSet)?.styling.backgroundColor.color || fillColor || "#fff";
+
+      // Only use the last color if multiple rules are applied
+      const borderColor = conditionalFormatting.findLast(rule => rule.styling.borderColor.isSet)?.styling.borderColor.color || fillColor || "#fff";
+
       
-
-      const xPos = () => {
-        if (isRoot) {
-          return 0; // Root node is always at x = 0
-        } else if (sameLabel) {
-          return previousNode ? previousNode.x + previousNode.width : 0; // Same label, position next to the previous node
-        } else {
-          return previousNode ? previousNode.x : 0; // Different label, position at the same x as the previous node
-        }
-      };
-      const yPos = () => {
-        if (isRoot) {
-          return previousNode ? previousNode.y + previousNode.height : 0; // Root node is always at y = 0
-        } else if (sameLabel) {
-          return  previousNode ? 0 : 0; // Same label, position below the previous node
-        } else {
-          return previousNode ? previousNode.y : 0; // Different label, position at the same y as the previous node
-        }
-      };
-
-      node.x = xPos() + nodePaddingX; // Set the x position of the node
-      node.y = yPos() + nodePaddingY; // Set the y position of the node
 
       const group = parentGroup.append("g")
         .attr("data-nodename", node.name)
@@ -141,24 +246,51 @@
         .attr("height", node.height)
         .attr("data-label", node.label)
         .attr("data-nodename", node.name)
-        .attr("fill", levelColors[level % levelColors.length])
-        .attr("stroke", "#333");
+        .attr("fill", bgColor || "#fff")
+        .attr("rx", 10) // Rounded corners
+        .attr("ry", 10); // Rounded corners
+
+
+      
+      if(node.children && node.children.length > 0){
+        group.append("rect") // Title background
+          .attr("width", node.width)
+          .attr("height", fontSettings.fontSize + titleMargin.top + titleMargin.bottom)
+          .attr("fill", bgColor || "#fff")
+          .attr("rx", 10) // Rounded corners
+          .attr("ry", 10); // Rounded corners
+           // Border width
+      }
+
+      group.append("rect")
+        .attr("width", node.width)
+        .attr("height", node.height)
+        .attr("rx", 10) // Rounded corners
+        .attr("ry", 10) // Rounded corners
+        .attr("fill", "none") // No fill for the border
+        .attr("stroke-width", 8) // Border width
+        .attr("stroke", borderColor || "#fff");
 
       group.append("text")
-        .attr("x", 0 + labelPadding)
-        .attr("y", 0 + labelOffset + labelPadding)
-        .text(`${node.name} - ${node.label}` || node.id);
+        .attr("x", 0 + titleMargin.left)
+        .attr("y", 0 + titleMargin.top + fontSettings.fontSize* 0.9) // Adjust the y position to center the text vertically
+        .attr("font-size", fontSettings.fontSize)
+        .attr("font-family", fontSettings.fontFamily)
+        .attr("font-weight", fontSettings.fontWeight)
+        .attr("fill", textColor || "#000")
+        .text(`${node.name} ${textContent}`)
+        .call(wrap, node.width - titleMargin.left - titleMargin.right); // Wrap the text to fit within the node width
 
 
       
       // Do a foreach which sends the child node and also previous node to the next level
-      node.children?.reduce((prev, child) => {
+      node.children?.reduce((prev, child, idx) => {
         if(prev.id === node.id){
-          drawNode(child, group, false);
+          drawNode(child, group, false, undefined, idx);
           return child;
         }
 
-        drawNode(child, group, false, prev);
+        drawNode(child, group, false, prev, idx); // Pass the previous node to the child node
         return child; // Return the current child as the previous node for the next iteration
       }, node); // Start with the current node as the previous node
 
@@ -166,92 +298,113 @@
     }
 
     function drawBlockDiagram(orgData: GraphData, svg: d3.Selection<SVGGElement, unknown, null, undefined>) {
+      // clear the groupContainer
+      svg.selectAll("*").remove(); // Clear the SVG before drawing
+      svg.attr("transform", "translate(0, 0)"); // Reset the transform attribute
+
+
       const rootNodes = buildHierarchy(orgData.nodes, orgData.relationships);
-        const rootNode: BlockNode = {
-            id: 'root',
-            name: 'Root',
-            label: 'Root',
-            metadata: {},
-            width: 0,
-            height: 0,
-            x: 0,
-            y: 0,
-            children: rootNodes
-        };
+      const rootNode: BlockNode = {
+          id: 'root',
+          name: 'Root',
+          label: 'Root',
+          metadata: {},
+          width: 0,
+          height: 0,
+          x: 0,
+          y: 0,
+          children: rootNodes
+      };
 
-        // const root = d3.hierarchy<BlockNode>(rootNode, d => d.children);
 
-        // let width = 0;
-        // let height = 0;
-        // root.each(d => {
-        //     width = Math.max(width, d.data.width);
-        //     height += d.data.height + labelPadding; // Add padding between nodes
-        // });
 
-        // const treeLayout = d3.tree<BlockNode>().size([width, height]);
-        // root.sort((a, b) => d3.ascending(a.data.label, b.data.label)); // Sort by label
-        // treeLayout(root);
-        const checkedNodes = new Set<string>(); // Set to keep track of checked nodes
-
-        rootNode.children?.reduce((prev, node) => {
-
+        rootNode.children?.reduce((prev, node, idx) => {
           if(prev.id === rootNode.id) {
-              drawNode(node, svg, true);
+              drawNode(node, svg, true, undefined, idx); // Draw the root node
               return node;
           }
 
-
-          node.x = prev.x + prev.width + labelPadding; // Set the x position of the node
-          node.y = prev.y; // Set the y position of the node to be the same as the previous node
-
-          drawNode(node, svg, true, prev);
+          drawNode(node, svg, true, prev, idx);
           return node; // Return the current node as the previous node for the next iteration
         }, rootNode); // Start with the root node as the previous node
         return rootNodes;
     }
 
-    async function updateHeights() {
-        await tick(); // wait for DOM
-
-        heights = refs.map(el => el?.scrollHeight || 0);
-    }
+    
 
     onMount(() => {
+
+      const root = getComputedStyle(document.documentElement);
+        const picoColors = getPicoColors(root);
+
+        (Object.keys(picoColors) as Array<keyof typeof picoColors>).forEach((key, idx) => {
+          const color = picoColors[key];
+          colors.set(key, [color]);
+        });
+
+
       const svg = d3.select(svgContainer);
       const g = d3.select(groupContainer);
+
   
         svg.call(
           (d3.zoom() as d3.ZoomBehavior<SVGSVGElement, unknown>)
-            .scaleExtent([0.5, 4])
+            .scaleExtent([0.2, 5])
             .on('zoom', ({ transform }) => g.attr('transform', transform))
         );
+
           
         FilterDataStore.subscribe(async (data) => {
           if (data) {
-              await updateHeights();
           }
         });
 
         DisplayOpsStore.subscribe(async (data) => {
           if (data) {
-              await updateHeights();
+              drawBlockDiagram(FilteredData, g);
+
+
           }
         });
 
-        drawBlockDiagram(FilteredData, g);
+        ConditionalFormattingStore.subscribe((data) => {
+          if (data) {
+            console.log('Conditional Formatting Data:', data);
+              drawBlockDiagram(FilteredData, g);
+          }
+        });
 
+
+        drawBlockDiagram(FilteredData, g);
     });
+
+    function print() {
+      const svgData = new XMLSerializer().serializeToString(svgContainer);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'block_diagram.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
 
 
 
   </script>
+
+  <!-- <button onclick={print} >Print</button> -->
   
   <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
     <g bind:this={groupContainer} >
 
     </g>
   </svg>
+
+  <div bind:this={minimap}>
+    
+  </div>
   
 
   <style>

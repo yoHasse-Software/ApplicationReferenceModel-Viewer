@@ -1,6 +1,6 @@
 
 <script lang="ts">
-    import { Data, setFilteredData, resetData, DisplayOpsStore, DisplayOps, getLabels } from "$lib/datastore.svelte";
+    import { Data, setFilteredData, resetData, DisplayOpsStore, DisplayOps, getLabels, setDisplayOptions } from "$lib/datastore.svelte";
     import { type DisplayOptions, type Entity, type GraphData } from "$lib/types";
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
@@ -11,7 +11,7 @@
         onConditionalFormatDialogueOpen: () => void;
     } = $props();
 
-    let isSidebarVisible = $state(true);
+    let isSidebarVisible = $state(false);
     let sortedEnteties: Map<string, Entity[]> = $state(new Map<string, Entity[]>());
     let filters: Map<string, string[]> = $state(new Map<string, string[]>);
 
@@ -21,6 +21,7 @@
 
     let displayOps = $state<DisplayOptions>({
         displayEmpty: true,
+        columns: {},
         visibleLabels: [],
     });
 
@@ -114,14 +115,11 @@
     }
 
     function DisplayOpsChanged(){
-        console.log('DisplayOpsChanged', displayOps);
-        console.log('DisplayOps', DisplayOps);
         if(DisplayOps.displayEmpty !== displayOps.displayEmpty) {
-            filterGraphData('n1');
+            // filterGraphData('n1');
         }
-        
-        DisplayOpsStore.set(displayOps);
 
+        setDisplayOptions(displayOps);
     }
 
     function onClearData(){
@@ -185,7 +183,6 @@
 
         // Order the map so that the keys are ordered in the same order as the labels array
 
-        $inspect("Starting");
         const acc = Data.nodes.reduce((acc, entity) => {
             const label = entity.label || 'Unknown';
             if (!acc.has(label)) {
@@ -205,6 +202,12 @@
         for (const label of labels) {
             filters.set(label, []);
         }
+
+        DisplayOpsStore.subscribe((data) => {
+            if (data) {
+                displayOps = data;
+            }
+        });
 
     });
 
@@ -254,19 +257,32 @@
                     <li>
                         <label>
                             <input type="checkbox" role="switch" 
-                                bind:checked={displayOps.displayEmpty} onchange={DisplayOpsChanged}  /> Display Empty levels
+                                bind:checked={displayOps.displayEmpty} onchange={() => DisplayOpsChanged()}  /> Display Empty levels
 
                         </label>
                         <small >
                             <em>If true, include models that doesn't have an application assigned.</em>
                         </small>
                     </li>
+
                     {#each getLabels() as label}
+                    <div >
                         <li>
+                            <fieldset>
                             <label>
                                 <input type="checkbox" role="switch" bind:checked={displayOps.visibleLabels[getLabels().indexOf(label)]} onchange={DisplayOpsChanged} /> Show {label}
                             </label>
+                            <label>
+                                Columns:
+                                <input type="range" min="1" max="8" bind:value={displayOps.columns[label]} onchange={() => DisplayOpsChanged()} data-tooltip={displayOps.columns[label]}/>
+                                <em>Rendering {displayOps.columns[label]} columns before line break</em>
+                            </label>
+                            </fieldset>
                         </li>
+                        <li>
+
+                        </li>
+                    </div>
                     {/each}
                 </ul>
             </details>

@@ -4,7 +4,7 @@
     import { type AppSoftware, type RelationShip, type GroupLevel, type LevelNode, type GraphData, type Entity, type NodeRelation } from '$lib/types';
     import ConditionalFormatDialogue from '$lib/components/ConditionalFormatDialogue.svelte';
     import NestedBlockDiagram from '$lib/components/NestedBlockDiagram.svelte';
-    import { FilteredData, initConditionalFormattingRules, initData, setLabels, setData, initLabels } from '$lib/datastore.svelte';
+    import { FilteredData, initConditionalFormattingRules, initData, setLabels, setData, initLabels, initDisplayOptions } from '$lib/datastore.svelte';
     import * as Papa from 'papaparse';
     
     // Example grouped data based on your CSV
@@ -15,10 +15,11 @@
     let rawCsvRows: Array<Record<string, string>> = $state([]);
     let labels: string[] = $state([]);
     let labelConstrains: NodeRelation[] = $state([]);
-    let loadType = $state("csv" as "csv" | "db");
+    let loadType = $state("csv" as "csv" | "db"  | "json");
     let selectedLabels: string[] = $state([""]);
     let showLabelSelector = $state(false);
     let csvIdentityLabel: string = $state("name" as string);
+    let jsonGraphData: GraphData = $state({} as GraphData);
 
 
     function flatCsvToGraph(csvRows: Array<Record<string, string>>, labels: string[], otherClmAsMetadata: boolean = false): GraphData {
@@ -62,13 +63,62 @@
     }
 
     function onFileSelect(event: Event) {
-        loadType = "csv";
         const target = event.target as HTMLInputElement | null;
         if (!target?.files?.length) {
             console.error('No file selected');
             return;
         }
         const file = target.files[0];
+
+        // Continue
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        if (fileExtension === 'csv') {
+            loadType = "csv";
+            readCsv(file);
+            
+        } else if (fileExtension === 'json') {
+            loadType = "json";
+            readJson(file);
+        } else {
+            console.error('Unsupported file type:', fileExtension);
+        }
+
+
+    }
+
+    function readJson(file: File) {
+        const reader = new FileReader();
+
+        labels = [];
+        selectedLabels = [];
+
+        reader.onload = function (e) {
+            const data = e.target?.result as string;
+            const jsonData = JSON.parse(data) as GraphData;
+
+            // Get all different labels from enteties and add to labels
+            const uniqueLabels = new Set<string>();
+            jsonData.nodes.forEach((node) => {
+                if (node.label) {
+                    uniqueLabels.add(node.label);
+                }
+            });
+            labels = Array.from(uniqueLabels);
+
+            jsonGraphData = jsonData;
+            console.log("Parsed JSON data:", jsonData);
+
+
+            labelConstrains = [];
+            selectedLabels = labels[0] ? [labels[0]] : [];
+            showLabelSelector = true;
+        };
+
+        reader.readAsText(file);
+
+    }
+
+    function readCsv(file: File) {
         const reader = new FileReader();
 
         rawCsvRows = [];
@@ -97,7 +147,7 @@
         };
 
         reader.readAsArrayBuffer(file);
-        
+
     }
 
     function loadCsv(){
@@ -109,7 +159,26 @@
 
         // const nodeTree = generateNodeTree(groupedData);
         setData(dataGraph);
-        setLabels(labels);
+    }
+
+    function loadJson(){
+        const dataGraph = jsonGraphData;
+        if (dataGraph.nodes.length === 0) {
+            alert('No data found.');
+            return [];
+        }
+
+        // filter out selected labels and their relationships
+        const filteredNodes = dataGraph.nodes.filter(node => selectedLabels.includes(node.label));
+        const filteredRelationships = dataGraph.relationships.filter(rel => {
+            return filteredNodes.some(node => node.id === rel.from || node.id === rel.to);
+        });
+
+        dataGraph.nodes = filteredNodes;
+        dataGraph.relationships = filteredRelationships;
+
+        // const nodeTree = generateNodeTree(groupedData);
+        setData(dataGraph);
     }
 
     async function loadFromDb(){
@@ -132,8 +201,7 @@
         console.log("Graph data from DB:", graphData);
 
         setData(graphData);
-       
-
+        
     }
 
     async function confirmColumnSelection() {
@@ -147,10 +215,13 @@
         if(loadType === "csv"){
             loadCsv();
         }
-
         else if(loadType === "db"){
             await loadFromDb();
         }
+        else if(loadType === "json"){
+            loadJson();
+        }
+
 
         showLabelSelector = false;
 
@@ -197,6 +268,10 @@
         if(loadType === 'csv'){
             return labels;
         }
+
+        if(loadType === 'json'){
+            return labels;
+        }
         
         if(loadType === 'db'){
             if (index === 0) {
@@ -241,9 +316,10 @@
 
 
     onMount(async () => {
+        initLabels();
+        initDisplayOptions();
         initData();
         initConditionalFormattingRules();
-        initLabels();
     });
   </script>
 
@@ -261,8 +337,8 @@
                 <span><strong>Select data to start</strong></span>
             </header>
             <label> 
-                <span data-tooltip="Select a file to load data from">Load from excel file</span>
-                <input style="margin:auto" type="file" accept=".csv" onchange={onFileSelect} />
+                <span data-tooltip="Select a file to load data from">Load from csv or json file</span>
+                <input style="margin:auto" type="file" accept=".csv, .json" onchange={onFileSelect} />
             </label>
             <p>Or load from database</p>
             <div style="float:left;" >

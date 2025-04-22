@@ -13,7 +13,7 @@
             <h1>View Data as Nested Block</h1>
         </article>
     </a>
-    <a href="/">
+    <a href="/graph">
         <article>
             <h1>Soon</h1>
         </article>

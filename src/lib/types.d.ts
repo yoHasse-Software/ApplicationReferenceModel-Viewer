@@ -28,6 +28,7 @@ export type BlockNode = Entity & {
     x: number;
     y: number;
     children?: BlockNode[];
+    value?: number;
 };
 
 
@@ -52,6 +53,9 @@ export type GroupLevel = { levelName: string; groups?: GroupLevel[]; children?: 
 export type DisplayOptions = {
     visibleLabels: boolean[];
     displayEmpty: boolean;
+    columns: {
+        [key: string]: number;
+    }
 }
 
 export type LevelNode = {
@@ -67,15 +71,15 @@ export type LevelNode = {
 }
 
 
-export type RuleOperator = 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';
-
+export type RuleOperator = 'equals' | 'metadataKeyEquals' | 'metadataKeyContains' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';
 
 
 export type ConditionalFormatting = { 
     id: string;
     name: string;
-    column: string; 
+    label: string; 
     value: string; 
+    metadataKey: string;
     operator: RuleOperator;
     styling: {
         backgroundColor: {

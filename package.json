@@ -18,6 +18,7 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@types/d3": "^7.4.3",
 		"@types/papaparse": "^5.3.15",
+		"idb": "^8.0.2",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
