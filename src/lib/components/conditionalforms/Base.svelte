@@ -1,9 +1,13 @@
 
 <script lang="ts">
-    const { rule = $bindable(), labels } = $props();
+    const { rule = $bindable() } = $props();
 </script>
 
-<h4>Base</h4>
+<article>
+<header>
+    <span>Base</span>
+</header>
+
 <fieldset class="grid">
 <label>
     <span class="required"></span>Name:
@@ -23,3 +27,4 @@
     </small>
 </label>
 </fieldset>
+</article>

@@ -7,6 +7,8 @@ export type AppSoftware = {
     };
 }
 
+type DiagramTypes = 'nestedblock' | 'graph' | 'sunburst';
+
 
 export type GraphData = {
     nodes: Entity[];
@@ -50,13 +52,49 @@ export type NodeRelation = {
 
 export type GroupLevel = { levelName: string; groups?: GroupLevel[]; children?: AppSoftware[]; };
 
+
+
 export type DisplayOptions = {
-    visibleLabels: boolean[];
-    displayEmpty: boolean;
-    columns: {
-        [key: string]: number;
-    }
+    nestedBlockOptions: NestedBlockOptions;
+    sunBurstOptions: SunBurstOptions;
 }
+
+export type LabelHierarchy = {
+    fromLabel: string;
+    toLabel: string;
+    relationType: string;
+}
+
+export type NestedBlockOptions = {
+    labelHierarchy: string[];
+    visibleLabels: string[];
+    displayEmpty: boolean;
+    rootAtLabel?: string;
+    columnsPerLabel: {
+        [key: string]: number;
+    };
+    labelColors: {
+        [key: string]: string;
+    };
+}
+
+export type SunBurstOptions = {
+    labelHierarchy: string[];
+    rootAtLabel?: string;
+    maxDepth?: number;
+    diameter?: number;
+    rootColumns: number;
+    labelColors?: {
+        [key: string]: string;
+    };
+}
+
+export type RelationShipsOption = {
+    fromLabel: string;
+    toLabel: string;
+    direction: "from" | "to" | "both";
+    relationType: string;
+ }
 
 export type LevelNode = {
     value: number;

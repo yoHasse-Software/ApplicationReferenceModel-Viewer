@@ -1,5 +1,5 @@
 import { SvelteMap } from "svelte/reactivity";
-import type { ConditionalFormatting, DisplayOptions, Entity, GraphData, LevelNode, RuleOperator } from "./types";
+import type { BlockNode, ConditionalFormatting, DisplayOptions, Entity, GraphData, LevelNode, RuleOperator } from "./types";
 import { get, writable } from "svelte/store";
 
 // export const N1WIDTH = 1200;
@@ -12,6 +12,21 @@ const localStorageLabelsKey = 'labels';
 const localStorageDisplayOptionsKey = 'displayOptions';
 
 const localStorageConditionalFormattingKey = 'conditionalFormattingRules';
+
+
+const emptyOptions: DisplayOptions = {  
+  nestedBlockOptions: {
+    labelHierarchy: [],
+    displayEmpty: false,
+    columnsPerLabel: {},
+    visibleLabels: [],
+    labelColors: {},
+  },
+  sunBurstOptions: {
+    labelHierarchy: [],
+    rootColumns: 0,
+  }
+}
 
 
 export const RuleOperatoruleOptions: RuleOperator[] = [
@@ -28,13 +43,28 @@ export const RuleOperatoruleOptions: RuleOperator[] = [
     'notEndsWith',
 ];
 
+export type DialogueOption = 'sunburstoptions' | 'nestedblockoptions' | 'conditionalformatting' | 'labeloptions' | 'filteroptions' | 'exportoptions' | 'importoptions' | 'resetoptions' | 'helpoptions';
 
+export const openDialogue = new SvelteMap<DialogueOption, boolean>([
+  ['sunburstoptions', false],
+  ['nestedblockoptions', false],
+  ['conditionalformatting', false],
+  ['labeloptions', false],
+  ['filteroptions', false],
+  ['exportoptions', false],
+  ['importoptions', false],
+  ['resetoptions', false],
+  ['helpoptions', false]
+]);
 
-
-export const Data: GraphData = $state({
+const Data: GraphData = $state({
     nodes: [],
     relationships: []
 });
+
+export function getData() {
+    return Data; // Return the current data
+}
 
 export function setData(newData: GraphData) {
     Data.nodes = newData.nodes; // Set new nodes
@@ -53,8 +83,14 @@ export function resetData() {
     }); // Clear filtered data store
 }
 
+export function initializeDataStores(){
+    initDisplayOptions();
+    initData();
+    initConditionalFormattingRules();
+}
 
-export function initData(): GraphData {
+
+function initData(): GraphData {
     const saved = localStorage.getItem(localStorageKey);
     if (saved) {
         const parsed = JSON.parse(saved) as GraphData;
@@ -91,54 +127,21 @@ FilterDataStore.subscribe((value) => {
   FilteredData.relationships = value.relationships; // Set new relationships
 });  
 
-let labels: string[] = $state([]);
 
-export function initLabels(){
-  if (labels.length > 0) {
-      return labels;
-  } else {
-      labels = JSON.parse(localStorage.getItem(localStorageLabelsKey) || '[]');
-      return labels;
-  }
-}
-export function getLabels() {
-    return labels;
-}
 
-export function setLabels(newLabels: string[]) {
-    labels = newLabels;
-    localStorage.setItem(localStorageLabelsKey, JSON.stringify(labels));
-}
 
-export const DisplayOpsStore = writable<DisplayOptions>({
-    visibleLabels: [],
-    columns: {},
-    displayEmpty: true
-});
+export const DisplayOpsStore = writable<DisplayOptions>(emptyOptions);
 
-export const DisplayOps: DisplayOptions = $state({
-    visibleLabels: [],
-    columns: {},
-    displayEmpty: true
-});
+ const DisplayOps: DisplayOptions = $state(emptyOptions);
 
-export function initDisplayOptions(): DisplayOptions {
+function initDisplayOptions(): DisplayOptions {
     const saved = localStorage.getItem(localStorageDisplayOptionsKey);
     if (saved) {
         const parsed = JSON.parse(saved) as DisplayOptions;
-        for (const label of labels) {
-            if(!parsed.columns[label]) {
-                parsed.columns[label] = 1; // Initialize columns for each label
-            }
-        }
         setDisplayOptions(parsed); // Update the store with the current display options
         return parsed;
     } else {
-        return {
-            visibleLabels: [],
-            columns: {},
-            displayEmpty: true
-        };
+        return emptyOptions;
     }
 }
 
@@ -148,11 +151,14 @@ export function setDisplayOptions(newDisplayOptions: DisplayOptions) {
     localStorage.setItem(localStorageDisplayOptionsKey, JSON.stringify(newDisplayOptions)); // Save to local storage
 }
 
+export function getDisplayOptions() {
+    return DisplayOps; // Return the current display options
+}
+
 
 DisplayOpsStore.subscribe((value) => {
-  DisplayOps.visibleLabels = value.visibleLabels;
-  DisplayOps.displayEmpty = value.displayEmpty;
-  DisplayOps.columns = value.columns;
+  DisplayOps.nestedBlockOptions = value.nestedBlockOptions; // Update the display options in the store
+  DisplayOps.sunBurstOptions = value.sunBurstOptions; // Update the display options in the store
 });
 
 export let DimensionMap = new SvelteMap<string, {height: number, width: number}>();
@@ -183,7 +189,7 @@ export function setDimensionMap(newMap: SvelteMap<string, {height: number, width
 }
 
 
-export function initConditionalFormattingRules(): Array<ConditionalFormatting> {
+function initConditionalFormattingRules(): Array<ConditionalFormatting> {
     if (ConditionalFormattingRules.rules.length > 0) {
         return ConditionalFormattingRules.rules;
     }
@@ -199,7 +205,7 @@ export function initConditionalFormattingRules(): Array<ConditionalFormatting> {
 }
 
 
-export function getConditionalRules(node: Entity): ConditionalFormatting[] {
+export function getConditionalRules(node: Entity | BlockNode): ConditionalFormatting[] {
     const rules = ConditionalFormattingRules.rules;
 
     if (!rules || rules.length === 0) {
@@ -220,6 +226,10 @@ export function getConditionalRules(node: Entity): ConditionalFormatting[] {
         }
 
         const value = node[r.metadataKey as keyof Entity] || node.metadata?.[r.metadataKey];
+
+        if (value === undefined || value === null) {
+          return false; // Skip if value is not defined
+        }
 
         switch(r.operator) {
           case 'equals':
@@ -254,7 +264,6 @@ export function getConditionalRules(node: Entity): ConditionalFormatting[] {
       return []; // No rules matched
     }
     
-    console.log(condRules, 'condRules', 'getConditionalRules');
 
     return condRules ?? [];
   }

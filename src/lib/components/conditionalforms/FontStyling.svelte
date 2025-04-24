@@ -1,11 +1,12 @@
 <script lang="ts">
-    const { rule = $bindable(), labels } = $props();
+    const { rule = $bindable() } = $props();
 
 </script>
 
+<article style="padding: unset;">
 <details>
     <summary role="button" class="outline">Font Styling</summary>
-    <fieldset class="grid">
+    <fieldset class="grid" style="padding: 1rem">
         <label>
             Font decoration:
             <select bind:value={rule.styling.textDecoration}>
@@ -40,3 +41,4 @@
         </label>
     </fieldset>
 </details>
+</article>

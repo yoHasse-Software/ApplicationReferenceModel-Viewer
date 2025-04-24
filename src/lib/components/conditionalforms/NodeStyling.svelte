@@ -1,15 +1,15 @@
 <script lang="ts">
 
-    const { rule = $bindable(), labels } = $props();
+    const { rule = $bindable() } = $props();
 
 
 </script>
 
+<article style="padding: unset;">
 
-<h4>Styling</h4>
 <details>
     <summary role="button" class="outline">Styling</summary>
-    <fieldset class="grid">
+    <fieldset class="grid" style="padding: 1rem">
         <label >
             Color:
             {#if rule.styling.color.isSet}
@@ -63,3 +63,5 @@
         </label>
     </fieldset>
 </details>
+
+</article>

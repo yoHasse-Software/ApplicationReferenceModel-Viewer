@@ -1,13 +1,10 @@
 <script lang="ts">
     import { onDestroy, onMount, tick } from 'svelte';
     import * as d3 from 'd3';
-    import {
-      Data,
-      getLabels,
-    } from '$lib/datastore.svelte';
-    import type { BlockNode } from '$lib/types';
+    import type { BlockNode, ConditionalFormatting, LabelHierarchy } from '$lib/types';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
+    import { getConditionalRules, getDisplayOptions } from '$lib/datastore.svelte';
 
 
     const { 
@@ -34,8 +31,8 @@
 
     const NS = '.sb'; 
 
-    const fullDepth = $state(d3.hierarchy(root).height);
-    const radius = $state(width / 2);
+    const fullDepth = $derived(d3.hierarchy(root).height);
+    const radius = $derived(width / 2);
 
     // const g = $state(d3.select(groupContainer).append('g').attr('class', 'arcs-layer').attr('transform', `translate(${xRootOffset}, ${yRootOffset})`));
 
@@ -46,10 +43,13 @@
     const activeNodes = $state([root.id]);
 
     const colors = new SvelteMap<string, string>();
+
+    const sunBurstOptions = $state(getDisplayOptions().sunBurstOptions);
+    const conditionalFormattingRuleMap = new SvelteMap<string, ConditionalFormatting[]>();
     
     function getColor(n: string) {
-        const level = getLabels().indexOf(n) || 0;
-        const isLeaf = level === getLabels().length - 1;
+        const level = sunBurstOptions.labelHierarchy.findIndex((label) => label === n);
+        const isLeaf = level === sunBurstOptions.labelHierarchy.length - 1;
 
         const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
         const textColor =  isLeaf ? colors.get('contrastInverse') : level % 2 === 0 ? colors.get('contrastInverse') : colors.get('secondary');
@@ -60,24 +60,13 @@
         };
     };
 
-    
-
-  
-      /* Arc length at centroid radius ≈ label pixel budget */
-      const labelWidth = (d: d3.HierarchyRectangularNode<any>) => {
-        const angle = d.x1 - d.x0;
-        const r = (d.y0 + d.y1) / 2;
-        return Math.max(angle * r, 1); // never below 30 px so wrap() isn’t fooled
-      };
-
-
     // Partition helper (value only on leaves so children take 100 %)
     function partitionRoot(node: d3.HierarchyNode<BlockNode>, R: number) {
       return d3.partition<BlockNode>()
         .size([2 * Math.PI, R])(
           node
             .sum(d => (d.children?.length ? 0 : d.value ?? 1))  // ← defaults to 1
-            .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+            .sort((a, b) => (b.value ?? 1) - (a.value ?? 1))
         );
     }
 
@@ -117,6 +106,7 @@
         .on('mouseover' + NS, (event: MouseEvent, d: any) => {
           const target = event.currentTarget as SVGPathElement;
           d3.select(target).style('cursor', d.children ? 'pointer' : 'default');
+
           updateTooltipText(d.ancestors()
                 .map((a: any) => a.data.name)
                 .reverse());
@@ -134,6 +124,7 @@
 
 
     function setupPathEnter(rootNode: d3.HierarchyNode<BlockNode> , paths: d3.Selection<SVGPathElement, d3.HierarchyRectangularNode<BlockNode>, SVGGElement, unknown>){
+      
       const pathsEnter = paths.enter()
         .append('path')
         .attr('fill',  d => getColor(d.data.label).fill ?? '#000')
@@ -173,6 +164,15 @@
     async function render(rootNode: d3.HierarchyNode<BlockNode>) {
         if(rootNode.children?.length === 0) return;
 
+        conditionalFormattingRuleMap.clear();
+
+        rootNode.each((d: d3.HierarchyNode<BlockNode>) => {
+          if (d.data) {
+            const rules = getConditionalRules(d.data);
+            conditionalFormattingRuleMap.set(d.data.id, rules);
+          }
+        });
+
         const fullFactor  = fullDepth + 1;
         const subDepth   = rootNode.height + 1;
         const k          = fullFactor / subDepth;
@@ -185,9 +185,6 @@
           .selectAll<SVGPathElement, typeof nodes[0]>('path')
           .data(nodes, d => d.data.id ?? d.data.name);
 
-        console.log('2tester');
-  
-  
         setupPathEnter(rootNode, paths);
 
         paths.exit()
@@ -244,9 +241,12 @@
           .style('opacity', 1);
       }
 
+    $effect(() => {
+
+      // console.log('nodes', nodes);
+    });
 
 
-  
     onMount(async () => {
       const rootcss = getComputedStyle(document.documentElement);
       const picoColors = getPicoColors(rootcss);
@@ -256,32 +256,29 @@
           colors.set(key, color);
         });
   
-      if (!root) return;
+      if (!root) {
+        return;
+      }
 
 
       await render(d3.hierarchy(root));
 
     });
 
-    function removePathListeners() {
-      d3.select(arcsLayer).selectAll<SVGPathElement, unknown>('path')
-        .on('click' + NS, null)
-        .on('mouseover' + NS, null)
-        .on('mousemove' + NS, null)
-        .on('mouseout' + NS, null);
-    }
+  function removePathListeners() {
+    d3.select(arcsLayer).selectAll<SVGPathElement, unknown>('path')
+      .on('click' + NS, null)
+      .on('mouseover' + NS, null)
+      .on('mousemove' + NS, null)
+      .on('mouseout' + NS, null);
+  }
 
 	onDestroy(() => {
-    // Remove listeners on destroy;
     removePathListeners();
-
-    // Remove everything we created in the group g
-    // d3.select(group).selectAll('*').remove(); // Remove all children of the group container
-
   });
   </script>
 
-  <g bind:this={group} transform="translate({xRootOffset}, {yRootOffset})" class="arcs-layer">
+  <g bind:this={group} data-nodename={root.name} transform="translate({xRootOffset}, {yRootOffset})" class="arcs-layer">
     <g bind:this={arcsLayer} class="arcs-layer"></g>
     <g bind:this={labelsLayer} class="labels-layer" pointer-events='none' ></g>
   </g>

@@ -1,36 +1,6 @@
 
 
 
-.n1-box {
-  /* border: 1px dotted var(--pico-secondary); */
-  background-color: var(--pico-secondary);
-}
-
-.n1-box>header {
-  background-color: var(--pico-secondary);
-}
-
-.n1-box>header h1 {
-  color: var(--pico-contrast-inverse);
-}
-
-.n2-box {
-  border: 1px dotted var(--pico-primary);
-
-}
-
-.n3-box>header,.n3-box[data-haschildren="false"] {
-  background-color: var(--pico-secondary);
-}
-
-.n3-box {
-  border: 1px solid var(--pico-secondary);
-}
-
-.n3-box>header h3, .n3-box[data-haschildren="false"]>h3 {
-  color: var(--pico-contrast-inverse);
-}
-
 .app {
   background-color: var(--pico-primary);
   color: var(--pico-contrast-inverse);
@@ -79,8 +49,122 @@
     }
 }
 
+.draggable {
+  margin-bottom: 0.5rem;
+  cursor: grab;
+}
+
+.dropped {
+  margin-bottom: 0.5rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: default;
+}
+
+.dropped>button {
+  display: flex;
+  margin: unset;
+  padding: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  background-color: var(--pico-contrast-inverse);
+  color: var(--pico-primary);
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+}
+
+.dropped .ico {
+  padding: unset;
+}
+
+
+.droppable {
+  height: 3rem;
+  padding: 0.5rem;
+  /* border-radius: 0.5rem; */
+  background-color: #f0f0f0;
+  color: var(--pico-color-contrast);
+  border: 2px dashed #ccc;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+.droppable:hover {
+  background-color: #e0e0e0;
+}
+
 
 .required::after {
   color: red;
   content: '* ';
+}
+
+
+.ico {
+  width: 1.3rem; 
+  height: 1.3rem; 
+  background-color: currentColor;
+  --svg: url('../icons/tabler/mood-puzzled.svg'); /* Default icon */
+  -webkit-mask-image: var(--svg);
+  mask-image: var(--svg);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  display: inline-flex;
+  align-items: center; 
+  justify-content: center;
+  vertical-align: middle; 
+}
+
+.ico-arrow-narrow-down {
+  --svg: url('../icons/tabler/arrow-narrow-down.svg');
+}
+
+.ico-arrow-narrow-up {
+  --svg: url('../icons/tabler/arrow-narrow-up.svg');
+}
+
+.ico-arrows-down-up {
+  --svg: url('../icons/tabler/arrows-down-up.svg');
+}
+
+.ico-trash {
+  --svg: url('../icons/tabler/trash.svg');
+}
+
+.ico-chart-donut-4 {
+  --svg: url('../icons/tabler/chart-donut-4.svg');
+}
+
+.ico-box-padding {
+  --svg: url('../icons/tabler/box-padding.svg');
+}
+
+.ico-x {
+  --svg: url('../icons/tabler/x.svg');
+}
+
+.ico-wand {
+  --svg: url('../icons/tabler/wand.svg');
+}
+
+.ico-copy-plus {
+  --svg: url('../icons/tabler/copy-plus.svg');
+}
+
+
+.ico-home {
+  --svg: url('../icons/tabler/home.svg');
 }

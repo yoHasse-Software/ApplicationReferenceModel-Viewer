@@ -1,11 +1,11 @@
 
 
 <script lang="ts">
-    import NodeChart from "$lib/components/NodeChart.svelte";
-    import SunBurst from "$lib/components/SunBurst.svelte";
+    import SunBurstOptionsDialogue from "$lib/components/dialogues/SunBurstOptionsDialogue.svelte";
+import SunBurst from "$lib/components/SunBurst.svelte";
     import { buildHierarchy } from "$lib/d3Utils";
-    import { Data, DisplayOps, initConditionalFormattingRules, initData, initDisplayOptions, initLabels } from "$lib/datastore.svelte";
-    import type { BlockNode } from "$lib/types";
+    import { DisplayOpsStore, getData, getDisplayOptions } from "$lib/datastore.svelte";
+    import type { BlockNode, SunBurstOptions } from "$lib/types";
     import * as d3 from "d3";
     import { onDestroy, onMount, tick } from "svelte";
 
@@ -26,27 +26,32 @@
     let totalYOffset = 0;
     let totalXOffset = 0;
 
+    async function buildSunBurst(sunBurstOptions: SunBurstOptions) {
+        // totalXOffset = 0;
+        // totalYOffset = 0;
+
+        const data = getData();
+        rootNodes = [];
+        await tick(); // Wait for the DOM to update before proceeding
+        rootNodes = buildHierarchy(data.nodes, data.relationships, 'sunburst', sunBurstOptions.rootAtLabel);
+        // const columns = sunBurstOptions.rootColumns || 3;
+        // const svgWidth = radius * Math.min(rootNodes.length, columns);
+        // const svgHeight = radius * Math.ceil(rootNodes.length / columns) - diameter;
+
+        // totalYOffset -= (svgHeight * 0.5);
+        // totalXOffset -= svgWidth * 0.5;
+    }
+
     onMount(async () => {
         // This is a placeholder for any initialization logic you might need.
-        
-        d3.select(groupContainer).selectChildren().remove(); // Remove any existing children in the group container
-
-        initLabels();
-        initDisplayOptions();
-        initData();
-        initConditionalFormattingRules();
 
         await tick(); // Wait for the DOM to update before proceeding
-        rootNodes = buildHierarchy(Data.nodes, Data.relationships);
 
-        const columns = DisplayOps.columns[Data.nodes[0].label] || 1;
-        
-        const svgWidth = radius * Math.min(rootNodes.length, columns);
-        const svgHeight = radius * Math.ceil(rootNodes.length / columns) - diameter;
-
-
-        totalYOffset -= (svgHeight * 0.5);
-        totalXOffset -= svgWidth * 0.5;
+        DisplayOpsStore.subscribe(async (state) => {
+            if (state.sunBurstOptions) {
+                await buildSunBurst(state.sunBurstOptions);
+            }
+        });
         
 
         d3.select(svgContainer).call(
@@ -61,26 +66,35 @@
     });
 
 
-
     function getRootPosition(node: BlockNode, idx: number) {
-        const nodeColumns = DisplayOps.columns[node.label] || 1;
+        const sunBurstOptions = getDisplayOptions().sunBurstOptions;
+
+        if(idx === 0) {
+            const containerWidth = svgContainer.getBoundingClientRect().width;
+            const containerHeight = svgContainer.getBoundingClientRect().height;
+            console.log("Container width: ", containerWidth);
+            totalYOffset = containerHeight * 0.5;
+            totalXOffset = containerWidth * 0.5;
+            return { xRootOffset: totalXOffset, yRootOffset: totalYOffset };
+        }
+
+        const nodeColumns = Math.max((sunBurstOptions.rootColumns || 1), 1);
         const isNewRow = idx % nodeColumns === 0;
 
         if(isNewRow) {
-            totalYOffset += (radius * (nodeColumns - 1));
+            totalYOffset += (radius * (nodeColumns === 1 ? 2: nodeColumns));
             totalXOffset = 0;
         }else {
-            totalXOffset += (radius * (nodeColumns - 1));
+            totalXOffset += (radius * (nodeColumns));
         }
         const xRootOffset = totalXOffset;
         const yRootOffset = totalYOffset;
 
-        $inspect('node', node.name, 'clmn', idx, 'isNewRow', isNewRow, 'xRootOffset', xRootOffset, 'yRootOffset', yRootOffset);
         return { xRootOffset, yRootOffset };
 
     }
-
 </script>
+
 <div class="breadcrumb" >
     <nav aria-label="breadcrumb">
         <ul>
@@ -92,7 +106,7 @@
 </div>
 <div style="height: 90vh;">
     <svg bind:this={svgContainer} width="100%" height="100%" style="border: 1px solid #ccc">
-        <g bind:this={groupContainer} transform={`translate(${totalXOffset}, ${totalYOffset})`}>
+        <g bind:this={groupContainer} transform={`translate(0, 0)`}>
         {#each rootNodes as node, idx}
             {@const { xRootOffset, yRootOffset } = getRootPosition(node, idx) }
     
@@ -107,6 +121,8 @@
     </svg>
 
 </div>
+
+
 
 
 <style>

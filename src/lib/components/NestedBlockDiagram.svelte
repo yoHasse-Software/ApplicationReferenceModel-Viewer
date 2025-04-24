@@ -3,14 +3,26 @@
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
     import type { BlockNode, Entity, GraphData, RelationShip } from '$lib/types';
-    import { ConditionalFormattingStore, DisplayOps, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getLabels } from '$lib/datastore.svelte';
+    import { ConditionalFormattingStore, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getData, getDisplayOptions } from '$lib/datastore.svelte';
     import { wrap } from '$lib/d3Utils';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
 
-  
-    let svgContainer: SVGSVGElement;
-    let groupContainer: SVGGElement;
+    const { 
+        root,
+        updateTooltipText,
+        xRootOffset = 0,
+        yRootOffset = 0,
+
+     }: { 
+        root: BlockNode,
+        updateTooltipText: (text: string[]) => void,
+        xRootOffset?: number,
+        yRootOffset?: number,
+     } = $props();
+
+    let group: SVGGElement;
+
     let minimap: HTMLDivElement;
     
 
@@ -43,12 +55,15 @@
 
     const colors = new SvelteMap<string, string[]>();
 
-    
-
-
-    $effect(() => {
-        
-    });
+    const getLabels = () => {
+        return getData().nodes.map(node => node.label)
+            .filter((label, index, self) => label && self.indexOf(label) === index)
+            .sort((a, b) => {
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+    };
 
     function computeSize(node: BlockNode): { width: number, height: number } {
       const levelRvsIdx = (getLabels().toReversed().indexOf(node.label) + 1);
@@ -56,8 +71,6 @@
       const levelMinWidth = nodeMinWidth * levelRvsIdx; // Minimum width based on the level of the node
 
       const debug = getLabels().toReversed()[levelRvsIdx-2];
-
-      $inspect('dbug', node.label, debug);
 
       if(!node || !node.children || node.children.length === 0) {
         // Get the potential width of children
@@ -73,7 +86,7 @@
 
       const childHeights = new Map<string, number>(); // Map to store the heights of each row group
       const childLabel = node.children[0].label || ""; // Get the label of the first child node
-      const childColumns = DisplayOps.columns[childLabel] || 1; // Get the number of columns for the child node label
+      const childColumns = getDisplayOptions().nestedBlockOptions.columnsPerLabel[childLabel] || 1; // Get the number of columns for the child node label
 
       node.children.forEach((child, idx) => {
         const childSize = computeSize(child);
@@ -126,7 +139,7 @@
 
       const isRoot = parentNode.id === 'root'; // Check if the node is a root node
       const thisIndex = parentNode.children!.findIndex(n => n.id === node.id); // Get the index of the current node in the parent's children array
-      const nodeColumns = DisplayOps.columns[node.label] || 1; // Get the number of columns for the node label
+      const nodeColumns = getDisplayOptions().nestedBlockOptions.columnsPerLabel[node.label] || 1; // Get the number of columns for the node label
 
       const newRow = thisIndex % nodeColumns === 0; // Check if the current node is the first in a new row
 
@@ -217,7 +230,7 @@
 
 
 
-    function drawNode(node: BlockNode, parentGroup: d3.Selection<SVGGElement, unknown, null, undefined>, isRoot: boolean = false, previousNode: BlockNode | undefined = undefined, childIndex = -1) {
+    function drawNode(node: BlockNode, parentGroup: any) {
       const level = getLabels().indexOf(node.label) || 0;
       const isLeaf = level === getLabels().length - 1;
 
@@ -233,9 +246,6 @@
 
       // Only use the last color if multiple rules are applied
       const borderColor = conditionalFormatting.findLast(rule => rule.styling.borderColor.isSet)?.styling.borderColor.color || fillColor || "#fff";
-
-      
-
       const group = parentGroup.append("g")
         .attr("data-nodename", node.name)
         .attr("data-label", node.label)
@@ -286,56 +296,38 @@
       // Do a foreach which sends the child node and also previous node to the next level
       node.children?.reduce((prev, child, idx) => {
         if(prev.id === node.id){
-          drawNode(child, group, false, undefined, idx);
+          drawNode(child, group);
           return child;
         }
 
-        drawNode(child, group, false, prev, idx); // Pass the previous node to the child node
+        drawNode(child, group); // Pass the previous node to the child node
         return child; // Return the current child as the previous node for the next iteration
       }, node); // Start with the current node as the previous node
 
 
     }
 
-    function drawBlockDiagram(orgData: GraphData, svg: d3.Selection<SVGGElement, unknown, null, undefined>) {
+    function drawBlockDiagram(orgData: BlockNode, groupContainer: d3.Selection<SVGGElement, unknown, null, undefined>) {
       // clear the groupContainer
-      svg.selectAll("*").remove(); // Clear the SVG before drawing
-      svg.attr("transform", "translate(0, 0)"); // Reset the transform attribute
+      // groupContainer.remove(); // Clear the SVG before drawing
 
-
-      const rootNodes = buildHierarchy(orgData.nodes, orgData.relationships);
-      const rootNode: BlockNode = {
-          id: 'root',
-          name: 'Root',
-          label: 'Root',
-          metadata: {},
-          width: 0,
-          height: 0,
-          x: 0,
-          y: 0,
-          children: rootNodes
-      };
-
-
-
-        rootNode.children?.reduce((prev, node, idx) => {
-          if(prev.id === rootNode.id) {
-              drawNode(node, svg, true, undefined, idx); // Draw the root node
+      orgData.children?.reduce((prev, node, idx) => {
+          if(prev.id === orgData.id) {
+              drawNode(node, groupContainer); // Draw the root node
               return node;
           }
 
-          drawNode(node, svg, true, prev, idx);
+          drawNode(node, groupContainer);
           return node; // Return the current node as the previous node for the next iteration
-        }, rootNode); // Start with the root node as the previous node
-        return rootNodes;
+        }, orgData); // Start with the root node as the previous node
     }
 
     
 
     onMount(() => {
 
-      const root = getComputedStyle(document.documentElement);
-        const picoColors = getPicoColors(root);
+      const cssRoot = getComputedStyle(document.documentElement);
+        const picoColors = getPicoColors(cssRoot);
 
         (Object.keys(picoColors) as Array<keyof typeof picoColors>).forEach((key, idx) => {
           const color = picoColors[key];
@@ -343,68 +335,16 @@
         });
 
 
-      const svg = d3.select(svgContainer);
-      const g = d3.select(groupContainer);
-
-  
-        svg.call(
-          (d3.zoom() as d3.ZoomBehavior<SVGSVGElement, unknown>)
-            .scaleExtent([0.2, 5])
-            .on('zoom', ({ transform }) => g.attr('transform', transform))
-        );
-
-          
-        FilterDataStore.subscribe(async (data) => {
-          if (data) {
-          }
-        });
-
-        DisplayOpsStore.subscribe(async (data) => {
-          if (data) {
-              drawBlockDiagram(FilteredData, g);
-
-
-          }
-        });
-
-        ConditionalFormattingStore.subscribe((data) => {
-          if (data) {
-            console.log('Conditional Formatting Data:', data);
-              drawBlockDiagram(FilteredData, g);
-          }
-        });
-
-
-        drawBlockDiagram(FilteredData, g);
+        drawBlockDiagram(root, d3.select(group));
     });
-
-    function print() {
-      const svgData = new XMLSerializer().serializeToString(svgContainer);
-      const blob = new Blob([svgData], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'block_diagram.svg';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-
 
 
   </script>
 
   <!-- <button onclick={print} >Print</button> -->
-  
-  <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
-    <g bind:this={groupContainer} >
+  <g bind:this={group} data-nodename={root.name} transform="translate({xRootOffset}, {yRootOffset})" class="arcs-layer">
+  </g>
 
-    </g>
-  </svg>
-
-  <div bind:this={minimap}>
-    
-  </div>
   
 
   <style>

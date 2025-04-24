@@ -1,6 +1,6 @@
 import * as d3 from "d3";
-import type { BlockNode, Entity, RelationShip } from "./types";
-import { getLabels } from "./datastore.svelte";
+import type { BlockNode, DiagramTypes, Entity, RelationShip } from "./types";
+import { getDisplayOptions } from "./datastore.svelte";
 
 export function wrap(text: d3.Selection<SVGTextElement, unknown, null, undefined>, width: number) {
     text.each(function () {
@@ -104,8 +104,25 @@ export function wrap(text: d3.Selection<SVGTextElement, unknown, null, undefined
 
 /** Build a hierarchical structure from flat nodes / relationships */
 
-export function buildHierarchy(nodes: Entity[], relationships: RelationShip[]) : BlockNode[] {
-  const reverseLblHierarchy = getLabels().toReversed();
+const getLabelsHeirarchyFromDiagramType = (diagramType: DiagramTypes) => {
+  switch (diagramType) {
+    case 'nestedblock':
+      return getDisplayOptions().nestedBlockOptions.labelHierarchy;
+    case 'graph':
+      return [];
+    case 'sunburst':
+      return getDisplayOptions().sunBurstOptions.labelHierarchy;
+    default:
+      return [];
+  } 
+};
+
+
+export function buildHierarchy(nodes: Entity[], 
+    relationships: RelationShip[], 
+    diagramType: DiagramTypes, 
+    rootStartsAt: string = 'root') : BlockNode[] {
+  const labelHierarchy = getLabelsHeirarchyFromDiagramType(diagramType) || [];
 
   const nodeMap = new Map(
     nodes.map((n) => [
@@ -113,7 +130,7 @@ export function buildHierarchy(nodes: Entity[], relationships: RelationShip[]) :
       {
         ...n,
         children: [] as BlockNode[],
-        value: reverseLblHierarchy.indexOf(n.label) + 1,
+        value: labelHierarchy.findIndex((l) => l === n.label) + 1,
         width: 0,
         height: 0,
         x: 0,
@@ -133,9 +150,28 @@ export function buildHierarchy(nodes: Entity[], relationships: RelationShip[]) :
     }
   });
 
-  const roots = Array.from(nodeMap.values()).filter(
-    (n) => n.label === getLabels()[0]
+  const rootLabel = rootStartsAt === 'root' ? labelHierarchy[0] : rootStartsAt;
+
+  const roots: BlockNode[] = Array.from(nodeMap.values()).filter(
+    (n) => n.label === rootLabel || n.label === 'default'
   );
+
+  if (rootStartsAt === 'root') {
+    const singularRoot: BlockNode = {
+      id: 'root',
+      name: '-',
+      label: 'root',
+      height: 0,
+      width: 0,
+      x: 0,
+      y: 0,
+      value: 0,
+      metadata: {},
+      children: roots,
+    }
+
+    return [singularRoot];
+  }
 
   return roots;
 }

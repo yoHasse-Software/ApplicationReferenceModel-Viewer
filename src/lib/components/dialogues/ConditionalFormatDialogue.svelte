@@ -1,23 +1,15 @@
 
 <script lang="ts">
-    import { ConditionalFormattingStore, getLabels, setConditionalFormattingRules } from "$lib/datastore.svelte";
+    import { ConditionalFormattingStore, getData, openDialogue, setConditionalFormattingRules } from "$lib/datastore.svelte";
     import type { ConditionalFormatting } from "$lib/types";
     import { onMount } from "svelte";
-    import Rule from "./conditionalforms/Rule.svelte";
-    import Base from "./conditionalforms/Base.svelte";
-    import NodeStyling from "./conditionalforms/NodeStyling.svelte";
-    import FontStyling from "./conditionalforms/FontStyling.svelte";
-
-    const { 
-        isOpen,
-        onClose,
-     } = $props();
+    import Rule from "../conditionalforms/Rule.svelte";
+    import Base from "../conditionalforms/Base.svelte";
+    import NodeStyling from "../conditionalforms/NodeStyling.svelte";
+    import FontStyling from "../conditionalforms/FontStyling.svelte";
 
     
     let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
-
-    let labels: string[] = $state([]);
-
 
     function canSaveRule(rule: ConditionalFormatting): boolean {
 
@@ -66,9 +58,33 @@
 
     let formattingRules: ConditionalFormatting[] = $state([]);
 
-    onMount(() => {
-        labels = getLabels();
+    function addRule() {
+        formattingRules.push({
+            id: crypto.randomUUID(),
+            name: '',
+            label: '',
+            value: '',
+            metadataKey: '',
+            operator: 'equals',
+            styling: {
+                backgroundColor: {
+                    isSet: false,
+                    color: '#ffffff',
+                },
+                color: {
+                    isSet: false,
+                    color: '#000000',
+                },
+                borderColor: {
+                    isSet: false,
+                    color: '#000000',
+                },
+            },
+        });
+    }
 
+
+    onMount(() => {
         ConditionalFormattingStore.subscribe((data) => {
             if (data) {
                 formattingRules = data;
@@ -80,27 +96,45 @@
 
 
 
-<dialog open={isOpen ? true : null}>
-
+<dialog open={openDialogue.get('conditionalformatting') || false}>
     <article>
         <header>
-            <h1>Conditional Formatting</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: larger">Conditional Formatting</span>
+                <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('conditionalformatting', false)} aria-label="add label">
+                    <span class="ico ico-x"></span>
+                </button>
+            </div>
         </header>
 
         <div>
-            <h3>Conditional Formatting</h3>
-            {#each formattingRules as rule, index (rule.id || index)}
+            <div style="display: flex; align-items: center; margin: 1rem 0;">
+                <span style="font-size: larger">Rules</span> 
+
+                <button 
+                    style="border: none; background: none; cursor: pointer; color: var(--pico-primary);"
+                    aria-label="add rule"
+                    data-tooltip="Add rule"
+                    onclick={addRule}>
+                <span class="ico ico-copy-plus"></span>
+                </button>
+            </div>
+            
+            {#each formattingRules as rule, index }
+            <article class="rule-container" >
                 <details bind:this={detailsRefs[index]} aria-label="Display rule">
                     <summary role="button" class="outline">{rule.name.trim().length > 0 ? rule.name: "New rule"}</summary>
-                <div>
-                        <Base {rule} labels={labels} />
-                    <hr />
-                        <Rule {rule} labels={labels} />
-                    <hr />
-                        <NodeStyling {rule} labels={labels} />
-                    <hr />
-                        <FontStyling {rule} labels={labels} />
-                    <hr />
+                    <div class="rule-content">
+                        <Base bind:rule={formattingRules[index]} />
+                        <Rule bind:rule={formattingRules[index]} />
+                    <article>
+                        <header>
+                            <span>Styling</span>
+                        </header>
+                        <NodeStyling bind:rule={formattingRules[index]} />
+                        <FontStyling bind:rule={formattingRules[index]} />
+                    </article>
+
                     <div role="group">
                         <button onclick={() => saveConditionalFormattningRules(index)}  aria-label="Add rule"
                             disabled={canSaveRule(rule) ? false : true}>
@@ -118,39 +152,15 @@
                         </small>
 
                     {/if}
-
-                </div>
+                    </div>
                 </details>
+            </article>
 
             {/each}
         </div>
 
         <footer>
-            <div role="group">
-                <button  onclick={() => formattingRules.push({
-                    id: crypto.randomUUID(),
-                    name: '',
-                    label: '',
-                    value: '',
-                    metadataKey: '',
-                    operator: 'equals',
-                    styling: {
-                        backgroundColor: {
-                            isSet: false,
-                            color: '#ffffff',
-                        },
-                        color: {
-                            isSet: false,
-                            color: '#000000',
-                        },
-                        borderColor: {
-                            isSet: false,
-                            color: '#000000',
-                        },
-                    },
-                })}>Add Rule</button>
-                <button class="outline secondary" onclick={onClose}>Close</button>
-            </div>
+
         </footer>
 
     </article>
@@ -163,6 +173,16 @@
         max-width: 600px;
     }
 
+    /* get article where first child details has attribute open and set padding */
+
+    .rule-container{
+        padding: unset;
+    }
+
+
+    .rule-content {
+        padding: 1rem;
+    }
 
     fieldset.grid {
         grid-template-columns: repeat(auto-fill, minmax('auto', 1fr));
