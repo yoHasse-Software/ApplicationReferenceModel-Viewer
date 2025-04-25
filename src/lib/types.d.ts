@@ -70,6 +70,8 @@ export type NestedBlockOptions = {
     visibleLabels: string[];
     displayEmpty: boolean;
     rootAtLabel?: string;
+    boxModel?: BoxModel;
+    titleModel?: TitleModel;
     columnsPerLabel: {
         [key: string]: number;
     };
@@ -107,6 +109,44 @@ export type LevelNode = {
         [key: string]: string | number | boolean;
     };
 }
+
+
+export type FontSettings = {
+    fontSize: number;
+    fontFamily: "Arial, Helvetica, sans-serif" | "Courier New, Courier, monospace" | "Georgia, serif" | "Times New Roman, Times, serif" | "Verdana, sans-serif";
+    fontWeight: "normal" | "bold" | "bolder" | "lighter";
+}
+
+export type TitleModel = {
+    fontSettings: FontSettings;
+    margin: Insets;
+}
+
+export type BoxModel = {
+    minHeight: number;
+    minWidth: number;
+    margin: Insets;
+}
+
+export type Insets = {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+}
+
+
+export type ColorPalette = {
+    primary: string;
+    secondary: string;
+    primaryColor: string;
+    secondaryColor: string;
+    primaryBg: string;
+    secondaryBg: string;
+    contrast: string;
+    contrastInverse: string;
+}
+
 
 
 export type RuleOperator = 'equals' | 'metadataKeyEquals' | 'metadataKeyContains' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';

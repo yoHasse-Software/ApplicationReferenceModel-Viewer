@@ -45,6 +45,11 @@
     margin-top: 2rem;
   }
 
+  #content {
+    min-height: 90vh;
+  }
+
+
   .grid {
     grid-template-columns: auto 1fr;
   }
