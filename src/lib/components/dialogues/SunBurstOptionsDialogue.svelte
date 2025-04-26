@@ -10,6 +10,7 @@
 
     let sunBurstOptions: SunBurstOptions = $derived(getDisplayOptions().sunBurstOptions || {});
     const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
+    let dialogueOnSide = $state(false);
 
     const dropped: string[] = $derived(sunBurstOptions.labelHierarchy || []);
 
@@ -90,14 +91,23 @@
 </script>
 
 {#if sunBurstOptions && openDialogue.get('sunburstoptions')}
-<dialog open>
+<dialog open class:side-dialogue={dialogueOnSide}>
     <article>
         <header style="position: sticky; top: -1rem; z-index: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
                 <span style="font-size: larger">Display options for Sunburst diagram</span>
-                <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('sunburstoptions', false)} aria-label="add label">
-                    <span class="ico ico-x"></span>
-                </button>
+                <div role="group" >
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => dialogueOnSide = !dialogueOnSide} aria-label="add label" data-tooltip="Toggle dialogue to side" data-placement="bottom">
+                        {#if dialogueOnSide}
+                            <span class="ico ico-arrow-bar-right"></span>
+                        {:else}
+                            <span class="ico ico-arrow-bar-left"></span>
+                        {/if}
+                    </button>
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('sunburstoptions', false)} aria-label="add label">
+                        <span class="ico ico-x"></span>
+                    </button>
+                </div>
             </div>
         </header>
         <article>

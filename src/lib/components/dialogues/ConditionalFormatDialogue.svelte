@@ -10,6 +10,7 @@
 
     
     let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
+    let dialogueOnSide = $state(false);
 
     function canSaveRule(rule: ConditionalFormatting): boolean {
 
@@ -95,15 +96,26 @@
 </script>
 
 
+{#if openDialogue.get('conditionalformatting') || false}
 
-<dialog open={openDialogue.get('conditionalformatting') || false}>
+<dialog open class:side-dialogue={dialogueOnSide}>
     <article>
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
                 <span style="font-size: larger">Conditional Formatting</span>
-                <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('conditionalformatting', false)} aria-label="add label">
-                    <span class="ico ico-x"></span>
-                </button>
+                
+                <div role="group" >
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => dialogueOnSide = !dialogueOnSide} aria-label="add label" data-tooltip="Toggle dialogue to side" data-placement="bottom">
+                        {#if dialogueOnSide}
+                            <span class="ico ico-arrow-bar-right"></span>
+                        {:else}
+                            <span class="ico ico-arrow-bar-left"></span>
+                        {/if}
+                    </button>
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('conditionalformatting', false)} aria-label="add label">
+                        <span class="ico ico-x"></span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -166,6 +178,8 @@
     </article>
 
 </dialog>
+
+{/if}
 
 
 <style>

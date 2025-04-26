@@ -232,15 +232,12 @@ export function getConditionalRules(node: Entity | BlockNode): ConditionalFormat
 
         const value = node[r.metadataKey as keyof Entity] || node.metadata?.[r.metadataKey];
 
-        if (value === undefined || value === null) {
-          return false; // Skip if value is not defined
-        }
 
         switch(r.operator) {
           case 'equals':
-            return value.toString().toLocaleLowerCase() === r.value.toLocaleLowerCase();
+            return value?.toString().toLocaleLowerCase() === r.value?.toLocaleLowerCase() || false;
           case 'contains':
-            return value.toString().toLocaleLowerCase().includes(r.value.toLocaleLowerCase());
+            return value?.toString().toLocaleLowerCase().includes(r.value?.toLocaleLowerCase());
           case 'startsWith':
             return value.toString().startsWith(r.value);
           case 'endsWith':

@@ -7,11 +7,14 @@
     import { SvelteMap } from "svelte/reactivity";
 
     let nestedBlockOptions: NestedBlockOptions = $derived(getDisplayOptions().nestedBlockOptions || {});
+    let dialogueOnSide = $state(false);
     const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
 
     const dropped: string[] = $derived(nestedBlockOptions.labelHierarchy || []);
 
+
     const allowDrop = (event: DragEvent) => event.preventDefault();
+
 
     function handleDragStart(event: DragEvent, label: string) {
         event.dataTransfer?.setData('text/plain', label);
@@ -63,6 +66,7 @@
         setDisplayOptions(currentOptions);
     }
 
+    
     onMount(() => {
         FilterDataStore.subscribe((data) => {
             if (data) {
@@ -84,14 +88,23 @@
 
 {#if nestedBlockOptions && openDialogue.get('nestedblockoptions')}
 
-<dialog open>
+<dialog open class:side-dialogue={dialogueOnSide}>
     <article>
         <header style="position: sticky; top: -1rem; z-index: 1;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
                 <span style="font-size: larger">Display options for Nested block diagram</span>
-                <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('nestedblockoptions', false)} aria-label="add label">
-                    <span class="ico ico-x"></span>
-                </button>
+                <div role="group" >
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => dialogueOnSide = !dialogueOnSide} aria-label="add label" data-tooltip="Toggle dialogue to side" data-placement="bottom">
+                        {#if dialogueOnSide}
+                            <span class="ico ico-arrow-bar-right"></span>
+                        {:else}
+                            <span class="ico ico-arrow-bar-left"></span>
+                        {/if}
+                    </button>
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('nestedblockoptions', false)} aria-label="add label">
+                        <span class="ico ico-x"></span>
+                    </button>
+                </div>
             </div>
         </header>
     <div class="grid" style="grid-template-columns: auto, auto; gap: 1rem;">
@@ -200,4 +213,7 @@
 </dialog>
 
 {/if}
+
+
+
 

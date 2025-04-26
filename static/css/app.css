@@ -108,6 +108,16 @@
   content: '* ';
 }
 
+.side-dialogue {
+  position: fixed;
+  min-width: unset;
+  max-width: 40%;
+  top: 0;
+  left: 0;
+  right: unset;
+  bottom: unset;
+}
+
 
 .ico {
   width: 1.3rem; 
@@ -167,4 +177,12 @@
 
 .ico-home {
   --svg: url('../icons/tabler/home.svg');
+}
+
+.ico-arrow-bar-left {
+  --svg: url('../icons/tabler/arrow-bar-left.svg');
+}
+
+.ico-arrow-bar-right {
+  --svg: url('../icons/tabler/arrow-bar-right.svg');
 }

@@ -28,9 +28,10 @@
 
 
 
+
+
     function drawNode(node: BlockNode, parentGroup: any) {
       const options = getDisplayOptions().nestedBlockOptions;
-
       const level = options.labelHierarchy.indexOf(node.label) || 0;
       const isLeaf = level === options.labelHierarchy.length - 1;
 
@@ -80,7 +81,9 @@
         .attr("height", node.height)
         .attr("rx", 10) // Rounded corners
         .attr("ry", 10) // Rounded corners
-        .attr("fill", "none"); // No fill for the border
+        .attr("fill", "none") // No fill for the bord
+        .attr("stroke", borderColor || "#000")
+        .attr("stroke-width", 2); // Border width
         
 
       group.append("text")
@@ -136,8 +139,13 @@
           colors.set(key, [color]);
         });
 
+        ConditionalFormattingStore.subscribe((data) => {
+          if (data) {
+            drawBlockDiagram(root, d3.select(group));
+          }
+        });
 
-        drawBlockDiagram(root, d3.select(group));
+
     });
 
 

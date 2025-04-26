@@ -9,7 +9,8 @@
 
 <details>
     <summary role="button" class="outline">Styling</summary>
-    <fieldset class="grid" style="padding: 1rem">
+    <div class="grid" style="grid-template-columns: 1fr; gap: 1rem;">
+        <div>
         <label >
             Color:
             {#if rule.styling.color.isSet}
@@ -26,7 +27,8 @@
                 <em>Changes the text color when rule is applied</em>
             </small>
         </label>
-
+    </div>
+    <div>
         <label>
             Background:
             {#if rule.styling.backgroundColor.isSet}
@@ -44,6 +46,8 @@
                 <em>Changes the background color when rule is applied</em>
             </small>
         </label>
+    </div>
+    <div>
         <label>
             Border Color:
             {#if rule.styling.borderColor.isSet}
@@ -61,7 +65,8 @@
             </small>
 
         </label>
-    </fieldset>
+    </div>
+    </div>
 </details>
 
 </article>
