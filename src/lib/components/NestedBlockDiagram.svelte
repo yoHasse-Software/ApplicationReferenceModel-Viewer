@@ -68,7 +68,7 @@
       if(node.children && node.children.length > 0){
         group.append("rect") // Title background
           .attr("width", node.width)
-          .attr("height", titleModel.fontSettings.fontSize + titleModel.margin.top + titleModel.margin.bottom)
+          .attr("height", titleModel.fontSettings.fontSize + titleModel.offsets.top + titleModel.offsets.bottom)
           .attr("fill", bgColor || "#fff")
           .attr("rx", 10) // Rounded corners
           .attr("ry", 10); // Rounded corners
@@ -80,19 +80,18 @@
         .attr("height", node.height)
         .attr("rx", 10) // Rounded corners
         .attr("ry", 10) // Rounded corners
-        .attr("fill", "none") // No fill for the border
-        .attr("stroke-width", 8) // Border width
-        .attr("stroke", borderColor || "#fff");
+        .attr("fill", "none"); // No fill for the border
+        
 
       group.append("text")
-        .attr("x", 0 + titleModel.margin.left)
-        .attr("y", 0 + titleModel.margin.top + titleModel.fontSettings.fontSize * 0.9) // Adjust the y position to center the text vertically
+        .attr("x", 0 + titleModel.offsets.left)
+        .attr("y", 0 + titleModel.offsets.top + titleModel.fontSettings.fontSize * 0.9) // Adjust the y position to center the text vertically
         .attr("font-size", titleModel.fontSettings.fontSize)
         .attr("font-family", titleModel.fontSettings.fontFamily)
         .attr("font-weight", titleModel.fontSettings.fontWeight)
         .attr("fill", textColor || "#000")
         .text(`${node.name} ${textContent}`)
-        .call(wrap, node.width - titleModel.margin.left - titleModel.margin.right); // Wrap the text to fit within the node width
+        .call(wrap, node.width - titleModel.offsets.left - titleModel.offsets.right); // Wrap the text to fit within the node width
 
 
       

@@ -21,6 +21,11 @@ const emptyOptions: DisplayOptions = {
     columnsPerLabel: {},
     visibleLabels: [],
     labelColors: {},
+    boxModel: {
+      minWidth: 100,
+      minHeight: 40,
+      spacing: 5,
+    },
   },
   sunBurstOptions: {
     labelHierarchy: [],

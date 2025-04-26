@@ -70,7 +70,7 @@ export type NestedBlockOptions = {
     visibleLabels: string[];
     displayEmpty: boolean;
     rootAtLabel?: string;
-    boxModel?: BoxModel;
+    boxModel: BoxModel;
     titleModel?: TitleModel;
     columnsPerLabel: {
         [key: string]: number;
@@ -119,13 +119,13 @@ export type FontSettings = {
 
 export type TitleModel = {
     fontSettings: FontSettings;
-    margin: Insets;
+    offsets: Insets;
 }
 
 export type BoxModel = {
     minHeight: number;
     minWidth: number;
-    margin: Insets;
+    spacing: number;
 }
 
 export type Insets = {

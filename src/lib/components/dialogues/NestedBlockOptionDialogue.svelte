@@ -145,6 +145,11 @@
                     </select>
                     <small><em>Use to splitting the hierarchy into multiple diagrams instead of using 1 root</em></small>
                 </label>
+                <label>
+                    Spacing:
+                    <input type="range" min="1" max="50" bind:value={nestedBlockOptions.boxModel.spacing} onchange={() => displayOptionsChanged()} data-tooltip="Spacing"/>
+                    <em>Spacing {nestedBlockOptions.boxModel.spacing} between the nodes</em>
+                </label>
             </article>
         </article>
 </div>
