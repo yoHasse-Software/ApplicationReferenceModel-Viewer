@@ -1,17 +1,21 @@
 
 
 <script lang="ts">
+    import { db, type DiagramOptions } from "$lib/components/db/dexie";
     import SunBurstOptionsDialogue from "$lib/components/dialogues/SunBurstOptionsDialogue.svelte";
 import SunBurst from "$lib/components/SunBurst.svelte";
     import { buildHierarchy } from "$lib/d3Utils";
-    import { DisplayOpsStore, getData, getDisplayOptions } from "$lib/datastore.svelte";
-    import type { BlockNode, SunBurstOptions } from "$lib/types";
+    import { diagramOptions, enteties, openDialogue } from "$lib/datastore.svelte";
+    import type { BlockNode, DisplayOptions } from "$lib/types";
     import * as d3 from "d3";
     import { onDestroy, onMount, tick } from "svelte";
 
     let rootNodes: BlockNode[] = $state([]);
     let svgContainer: SVGSVGElement;
     let groupContainer: SVGGElement;
+
+    let sunBurstOptions: DiagramOptions | undefined = $state();
+    let optionsValid: boolean = $state(true);
 
 
     let tooltipText: string[] = $state(['']);
@@ -26,32 +30,41 @@ import SunBurst from "$lib/components/SunBurst.svelte";
     let totalYOffset = 0;
     let totalXOffset = 0;
 
-    async function buildSunBurst(sunBurstOptions: SunBurstOptions) {
-        // totalXOffset = 0;
-        // totalYOffset = 0;
+    async function buildSunBurst(sunBurstOptions: DiagramOptions) {
 
-        const data = getData();
-        rootNodes = [];
+        const labelHierarchy = sunBurstOptions.labelHierarchy || 'label';
         await tick(); // Wait for the DOM to update before proceeding
-        rootNodes = buildHierarchy(data.nodes, data.relationships, 'sunburst', sunBurstOptions.rootAtLabel);
-        // const columns = sunBurstOptions.rootColumns || 3;
-        // const svgWidth = radius * Math.min(rootNodes.length, columns);
-        // const svgHeight = radius * Math.ceil(rootNodes.length / columns) - diameter;
 
-        // totalYOffset -= (svgHeight * 0.5);
-        // totalXOffset -= svgWidth * 0.5;
+        const data = await db.enteties.where('label').anyOf(labelHierarchy).toArray();
+        const ids = data.map((d) => d.id);
+        const relationships = await db.relationships
+            .where('to').anyOf(ids)
+            .or('from').anyOf(ids)
+            .and((relationship) => relationship.type === '->')
+            .toArray();
+        rootNodes = [];
+        rootNodes = await buildHierarchy(data, relationships, sunBurstOptions);
     }
+    
 
     onMount(async () => {
         // This is a placeholder for any initialization logic you might need.
 
         await tick(); // Wait for the DOM to update before proceeding
 
-        DisplayOpsStore.subscribe(async (state) => {
-            if (state.sunBurstOptions) {
-                await buildSunBurst(state.sunBurstOptions);
+        diagramOptions.subscribe(async (state) => {
+            const currentOptions = state.find((option) => option.diagramType === 'sunburst');
+            if (currentOptions) {
+                sunBurstOptions = currentOptions;
+                if(sunBurstOptions.labelHierarchy.length === 0) {
+                    optionsValid = false;
+                    openDialogue.set('sunburstoptions', true);
+                    return;
+                }
+                await buildSunBurst(sunBurstOptions);
             }
         });
+        
         
 
         d3.select(svgContainer).call(
@@ -67,7 +80,9 @@ import SunBurst from "$lib/components/SunBurst.svelte";
 
 
     function getRootPosition(node: BlockNode, idx: number) {
-        const sunBurstOptions = getDisplayOptions().sunBurstOptions;
+        if(!sunBurstOptions) {
+            return { xRootOffset: 0, yRootOffset: 0 };
+        }
 
         if(idx === 0) {
             const containerWidth = svgContainer.getBoundingClientRect().width;

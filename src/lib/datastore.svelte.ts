@@ -1,37 +1,47 @@
 import { SvelteMap } from "svelte/reactivity";
-import type { BlockNode, ConditionalFormatting, DisplayOptions, Entity, GraphData, LevelNode, RuleOperator } from "./types";
+import type { BlockNode, BoxModel, DiagramTypes, DisplayOptions, GraphData, RuleOperator, TitleModel} from "./types";
 import { get, writable } from "svelte/store";
+import { db, type ConditionalFormatting, type DiagramOptions, type Entity } from "./components/db/dexie";
+import { liveQuery } from "dexie";
 
 // export const N1WIDTH = 1200;
 export const N2WIDTH = 1200;
 export const N3WIDTH = N2WIDTH * 0.3;
 export const APPWIDTH = N3WIDTH*0.8;
 
-export const localStorageKey = 'graphData';
-const localStorageLabelsKey = 'labels';
-const localStorageDisplayOptionsKey = 'displayOptions';
-
-const localStorageConditionalFormattingKey = 'conditionalFormattingRules';
-
-
-const emptyOptions: DisplayOptions = {  
-  nestedBlockOptions: {
-    labelHierarchy: [],
-    displayEmpty: false,
-    columnsPerLabel: {},
-    visibleLabels: [],
-    labelColors: {},
-    boxModel: {
-      minWidth: 100,
-      minHeight: 40,
-      spacing: 5,
-    },
-  },
-  sunBurstOptions: {
-    labelHierarchy: [],
-    rootColumns: 0,
-  }
+export const defaultBoxModel: BoxModel = {
+  minWidth: 100,
+  minHeight: 40,
+  spacing: 10
 }
+
+export const defaultTitleModel: TitleModel = {
+  fontSettings: {
+    fontSize: 24,
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontWeight: 'normal',
+  },
+  offsets: {
+    top: 10,
+    bottom: 0,
+    left: 10,
+    right: 0,
+  },
+}
+
+export const emptyOptions: DiagramOptions = {
+  labelHierarchy: [],
+  displayEmpty: true,
+  columnsPerLabel: {},
+  visibleLabels: [],
+  labelColors: {},
+  titleModel: defaultTitleModel,
+  boxModel: defaultBoxModel,
+  diagramType: "none"
+}
+
+
+
 
 
 export const RuleOperatoruleOptions: RuleOperator[] = [
@@ -62,157 +72,53 @@ export const openDialogue = new SvelteMap<DialogueOption, boolean>([
   ['helpoptions', false]
 ]);
 
-const Data: GraphData = $state({
-    nodes: [],
-    relationships: []
+async function getLabelsForDiagramType(diagramType: DiagramTypes) {
+  return await db.diagramOptions.where('diagramType').equals(diagramType).first()
+}
+
+
+export const enteties = liveQuery(
+    () => db.enteties.toArray() // Get all entities
+)
+
+
+export const relationships = liveQuery(
+    () => db.relationships.toArray() // Get all relationships
+)
+
+export const conditionalFormatting = liveQuery(
+    () => db.conditionalFormatting.toArray() // Get all conditional formatting rules
+)
+
+export const diagramOptions = liveQuery(
+    () => db.diagramOptions.toArray() // Get all diagram options
+)
+
+
+
+let inmemoryRules: ConditionalFormatting[] = $state([]);
+
+conditionalFormatting.subscribe((rules) => {
+  inmemoryRules = rules;
 });
 
-export function getData() {
-    return Data; // Return the current data
-}
 
-export function setData(newData: GraphData) {
-    Data.nodes = newData.nodes; // Set new nodes
-    Data.relationships = newData.relationships; // Set new relationships
-    localStorage.setItem(localStorageKey, JSON.stringify(Data));
-}
-
-
-export function resetData() {
-    Data.nodes = []; // Clear nodes
-    Data.relationships = []; // Clear relationships
-    localStorage.removeItem(localStorageKey); // Remove from local storage
-    FilterDataStore.set({
-        nodes: [],
-        relationships: []
-    }); // Clear filtered data store
-}
-
-export function initializeDataStores(){
-    initDisplayOptions();
-    initData();
-    initConditionalFormattingRules();
-}
-
-
-function initData(): GraphData {
-    const saved = localStorage.getItem(localStorageKey);
-    if (saved) {
-        const parsed = JSON.parse(saved) as GraphData;
-        setData(parsed);
-        setFilteredData(parsed);
-        return parsed;
-    } else {
-        return {
-            nodes: [],
-            relationships: []
-        };
-    }
-}
-
-
-export const FilterDataStore = writable<GraphData>();
-
-
-export const FilteredData: GraphData = $state({
-    nodes: [],
-    relationships: []
-});
-
-export function setFilteredData(newData: GraphData) {
-    FilterDataStore.set(newData);
-}
-
-FilterDataStore.subscribe((value) => {
-  if(!value || value.nodes?.length === 0) {
-    console.log('No filtered data available. Using original data.', value?.nodes?.length );
-    return;
-  }
-  FilteredData.nodes = value.nodes; // Set new nodes
-  FilteredData.relationships = value.relationships; // Set new relationships
-});  
-
-
-
-
-export const DisplayOpsStore = writable<DisplayOptions>(emptyOptions);
-
- const DisplayOps: DisplayOptions = $state(emptyOptions);
-
-function initDisplayOptions(): DisplayOptions {
-    const saved = localStorage.getItem(localStorageDisplayOptionsKey);
-    if (saved) {
-        const parsed = JSON.parse(saved) as DisplayOptions;
-        setDisplayOptions(parsed); // Update the store with the current display options
-        return parsed;
-    } else {
-        return emptyOptions;
-    }
-}
-
-
-export function setDisplayOptions(newDisplayOptions: DisplayOptions) {
-    DisplayOpsStore.set(newDisplayOptions); // Update the store with the new display options
-    localStorage.setItem(localStorageDisplayOptionsKey, JSON.stringify(newDisplayOptions)); // Save to local storage
-}
-
-export function getDisplayOptions() {
-    return DisplayOps; // Return the current display options
-}
-
-
-DisplayOpsStore.subscribe((value) => {
-  DisplayOps.nestedBlockOptions = value.nestedBlockOptions; // Update the display options in the store
-  DisplayOps.sunBurstOptions = value.sunBurstOptions; // Update the display options in the store
-});
 
 export let DimensionMap = new SvelteMap<string, {height: number, width: number}>();
 export let PositionMap = new SvelteMap<string, {top: number, left: number}>();
 
-
-const ConditionalFormattingRules: { rules: Array<ConditionalFormatting>} = $state({
-  rules: [],
-});
-
-export const ConditionalFormattingStore = writable<ConditionalFormatting[]>([]);
-
-ConditionalFormattingStore.subscribe((value) => {
-  ConditionalFormattingRules.rules = value; // Update the rules in the store
-});
-
-export function getConditionalFormattingRules() {
-    return ConditionalFormattingRules.rules;
-}
-export function setConditionalFormattingRules(newRules: Array<ConditionalFormatting>) {
-    ConditionalFormattingStore.set(newRules); // Update the store with the new rules
-
-    localStorage.setItem(localStorageConditionalFormattingKey, JSON.stringify(ConditionalFormattingRules.rules));
-}
 
 export function setDimensionMap(newMap: SvelteMap<string, {height: number, width: number}>) {
     DimensionMap = newMap;
 }
 
 
-function initConditionalFormattingRules(): Array<ConditionalFormatting> {
-    if (ConditionalFormattingRules.rules.length > 0) {
-        return ConditionalFormattingRules.rules;
-    }
 
-    const saved = localStorage.getItem(localStorageConditionalFormattingKey);
-    if (saved) {
-        const parsed = JSON.parse(saved) as Array<ConditionalFormatting>;
-        setConditionalFormattingRules(parsed); // Update the store with the current rules
-        return parsed;
-    } else {
-        return [];
-    }
-}
 
 
 export function getConditionalRules(node: Entity | BlockNode): ConditionalFormatting[] {
-    const rules = ConditionalFormattingRules.rules;
-
+    const rules = inmemoryRules; // Get the rules from the store
+  
     if (!rules || rules.length === 0) {
       return []; // No rules available
     }
@@ -231,7 +137,6 @@ export function getConditionalRules(node: Entity | BlockNode): ConditionalFormat
         }
 
         const value = node[r.metadataKey as keyof Entity] || node.metadata?.[r.metadataKey];
-
 
         switch(r.operator) {
           case 'equals':

@@ -1,14 +1,19 @@
 <script lang="ts">
-    import { DisplayOpsStore, FilterDataStore, getDisplayOptions, openDialogue, setDisplayOptions } from "$lib/datastore.svelte";
+    import { diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
 
-    import type { NestedBlockOptions, RelationShipsOption } from "$lib/types";
+    import type { RelationShipsOption } from "$lib/types";
     import { onMount } from "svelte";
-    import { buildRelationShipMap } from "./optionsUtils";
     import { SvelteMap } from "svelte/reactivity";
+    import { db, type DiagramOptions } from "../db/dexie";
+    import Dexie from "dexie";
+    
 
-    let nestedBlockOptions: NestedBlockOptions = $derived(getDisplayOptions().nestedBlockOptions || {});
+    let nestedBlockOptions: DiagramOptions = $state({
+        ...emptyOptions,
+        id: 2,
+        diagramType: 'nestedblock',
+    });
     let dialogueOnSide = $state(false);
-    const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
 
     const dropped: string[] = $derived(nestedBlockOptions.labelHierarchy || []);
 
@@ -26,62 +31,45 @@
         if (label) {
             dropped.push(label);
         }
+        displayOptionsChanged();
     }
 
-    function handledelete(idx: number) {
+    async function displayOptionsChanged() {
+        console.log("displayOptionsChanged", nestedBlockOptions);
+
+        await db.diagramOptions.put(Dexie.deepClone(nestedBlockOptions));
+    }
+
+    async function handledelete(idx: number) {
         if (idx >= 0 && idx < nestedBlockOptions.labelHierarchy.length) {
             nestedBlockOptions.labelHierarchy.splice(idx, 1);
             dropped.splice(idx, 1);
-            displayOptionsChanged();
         }
+    
+        displayOptionsChanged();
     }
 
-    function getLabelOptions() : string[] {
-        const relationShipLabels = Array.from(relationShipOptions.values());
-        return relationShipLabels
-            .flatMap((rel) => rel)
-            .flatMap((rel) => {
-                if (rel.fromLabel && rel.toLabel) {
-                    return [rel.fromLabel, rel.toLabel];
-                } else if (rel.fromLabel) {
-                    return [rel.fromLabel];
-                } else if (rel.toLabel) {
-                    return [rel.toLabel];
-                }
-                return [];
-            })
-            .filter((label, index, self) => label && self.indexOf(label) === index)
-            .filter((label) => nestedBlockOptions.labelHierarchy.some(l => l === label) ? false : true)
-            .sort((a, b) => {
+    let labelOptions: string[] = $state([]);
+
+    onMount(async () => {
+        diagramOptions.subscribe(async (data) => {
+            const currentOptions = data.find((option) => option.diagramType === 'nestedblock');
+            if (currentOptions) {
+                nestedBlockOptions = currentOptions;
+            }
+            else {
+                console.log("No options found, creating default options", nestedBlockOptions);
+                await db.diagramOptions.add(Dexie.deepClone(nestedBlockOptions));
+            }
+        });
+
+        enteties.subscribe((data) => {
+            labelOptions = data.map((d) => d.label).filter((label) => label && label.length > 0).filter((label, index, self) => self.indexOf(label) === index).sort((a, b) => {
                 if (a < b) return -1;
                 if (a > b) return 1;
                 return 0;
             });
-    };
-
-
-    function displayOptionsChanged() {
-        const currentOptions = getDisplayOptions();
-        currentOptions.nestedBlockOptions = nestedBlockOptions;
-        setDisplayOptions(currentOptions);
-    }
-
-    
-    onMount(() => {
-        FilterDataStore.subscribe((data) => {
-            if (data) {
-                const map = buildRelationShipMap(data);
-                map.forEach((value, key) => {
-                    relationShipOptions.set(key, value);
-                });
-            }
-        });
-
-        DisplayOpsStore.subscribe((data) => {
-            if (data) {
-                
-            }
-        });
+        })
     });
 
 </script>
@@ -115,7 +103,7 @@
             <div class="grid">
                 <article>
                     <header>Label options</header>
-                    {#each getLabelOptions() as lbl, idx}
+                    {#each labelOptions as lbl, idx}
                     <div
                         class="draggable"
                         draggable="true"
@@ -160,8 +148,8 @@
                 </label>
                 <label>
                     Spacing:
-                    <input type="range" min="1" max="50" bind:value={nestedBlockOptions.boxModel.spacing} onchange={() => displayOptionsChanged()} data-tooltip="Spacing"/>
-                    <em>Spacing {nestedBlockOptions.boxModel.spacing} between the nodes</em>
+                    <input type="range" min="1" max="50" bind:value={nestedBlockOptions.boxModel!.spacing} onchange={() => displayOptionsChanged()} data-tooltip="Spacing"/>
+                    <em>Spacing {nestedBlockOptions.boxModel!.spacing} between the nodes</em>
                 </label>
             </article>
         </article>

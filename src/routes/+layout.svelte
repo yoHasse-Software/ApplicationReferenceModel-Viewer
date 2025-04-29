@@ -3,19 +3,19 @@
     import NestedBlockOptionDialogue from '$lib/components/dialogues/NestedBlockOptionDialogue.svelte';
     import SunBurstOptionsDialogue from '$lib/components/dialogues/SunBurstOptionsDialogue.svelte';
     import Sidebar from '$lib/components/Sidebar.svelte';
-    import { getData, initializeDataStores } from '$lib/datastore.svelte';
+    import { enteties } from '$lib/datastore.svelte';
     import { onMount } from 'svelte';
 
     let { children } = $props();
 
-    let isConditionalFormatingDialogueOpen = $state(false);
-    let closeFormatDialogue = () => {
-        isConditionalFormatingDialogueOpen = false;
-    };
+    let entityLength = $state(0);
 
-    onMount(() => {
+    
+    onMount(async () => {
         // Initialize the conditional formatting rules
-        initializeDataStores();
+        enteties.subscribe((value) => {
+            entityLength = value.length;
+        });
     });
 
 </script>
@@ -26,10 +26,7 @@
 
 
 
-<main class:container={getData().nodes.length === 0} class:container-fluid={getData().nodes.length > 0} >
-
-
-
+<main class:container={entityLength === 0} class:container-fluid={entityLength > 0} >
     <div class="grid" style="overflow: hidden;">
       <Sidebar />
       <div id="content">

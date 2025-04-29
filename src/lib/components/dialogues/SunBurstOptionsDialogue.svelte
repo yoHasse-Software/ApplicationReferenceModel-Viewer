@@ -1,14 +1,22 @@
 
 <script lang="ts">
-    import { DisplayOpsStore, FilterDataStore, getData, getDisplayOptions, openDialogue, setDisplayOptions } from "$lib/datastore.svelte";
-    import type { RelationShipsOption, SunBurstOptions } from "$lib/types";
+    import {  diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
+    import type { RelationShipsOption } from "$lib/types";
     import { lab } from "d3";
     import { onMount } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
     import { buildRelationShipMap } from "./optionsUtils";
+    import { db, type DiagramOptions } from "../db/dexie";
+    import Dexie from "dexie";
 
 
-    let sunBurstOptions: SunBurstOptions = $derived(getDisplayOptions().sunBurstOptions || {});
+    let sunBurstOptions: DiagramOptions = $state({
+        ...emptyOptions,
+        id: 1,
+        diagramType: 'sunburst',
+    });
+    let labelOptions: string[] = $state([]);
+
     const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
     let dialogueOnSide = $state(false);
 
@@ -26,65 +34,46 @@
         if (label) {
             dropped.push(label);
         }
+        displayOptionsChanged();
     }
 
     function handledelete(idx: number) {
         if (idx >= 0 && idx < sunBurstOptions.labelHierarchy.length) {
             sunBurstOptions.labelHierarchy.splice(idx, 1);
             dropped.splice(idx, 1);
+            labelOptions.push(sunBurstOptions.labelHierarchy[idx]);
+            labelOptions = labelOptions.filter((label) => label !== sunBurstOptions.labelHierarchy[idx]);
             displayOptionsChanged();
         }
     }
 
 
-    function displayOptionsChanged() {
+    async function displayOptionsChanged() {
         console.log("displayOptionsChanged", sunBurstOptions);
-        const currentOptions = getDisplayOptions();
-        currentOptions.sunBurstOptions = sunBurstOptions;
-        setDisplayOptions(currentOptions);
+        await db.diagramOptions.put(Dexie.deepClone(sunBurstOptions));
     }
-     
-     function getLabelOptions() : string[] {
 
-        const relationShipLabels = Array.from(relationShipOptions.values());
-        return relationShipLabels
-            .flatMap((rel) => rel)
-            .flatMap((rel) => {
-                if (rel.fromLabel && rel.toLabel) {
-                    return [rel.fromLabel, rel.toLabel];
-                } else if (rel.fromLabel) {
-                    return [rel.fromLabel];
-                } else if (rel.toLabel) {
-                    return [rel.toLabel];
-                }
-                return [];
-            })
-            .filter((label, index, self) => label && self.indexOf(label) === index)
-            .filter((label) => sunBurstOptions.labelHierarchy.some(l => l === label) ? false : true)
-            .sort((a, b) => {
+     onMount(() => {
+        diagramOptions.subscribe(async (state) => {
+            const currentOptions = state.find((option) => option.diagramType === 'sunburst');
+            if (currentOptions) {
+                sunBurstOptions = currentOptions;
+            }
+            else {
+                await db.diagramOptions.add(Dexie.deepClone(sunBurstOptions));
+            }
+        });
+
+        enteties.subscribe((data) => {
+            labelOptions = data.map((d) => d.label)
+            .filter((label) => sunBurstOptions.labelHierarchy.indexOf(label) === -1)
+            .filter((label) => label && label.length > 0)
+            .filter((label, index, self) => self.indexOf(label) === index).sort((a, b) => {
                 if (a < b) return -1;
                 if (a > b) return 1;
                 return 0;
             });
-     };
-
-
-     onMount(() => {
-        FilterDataStore.subscribe((data) => {
-            if (data) {
-                const newRelMap = buildRelationShipMap(data);
-                relationShipOptions.clear();
-                newRelMap.forEach((rel, key) => {
-                    relationShipOptions.set(key, rel);
-                });
-            }
-        });
-
-        DisplayOpsStore.subscribe((data) => {
-            if (data) {
-                
-            }
-        });
+        })
      });
      
 
@@ -117,7 +106,7 @@
             <div class="grid">
                 <article>
                     <header>Label options</header>
-                    {#each getLabelOptions() as lbl, idx}
+                    {#each labelOptions as lbl, idx}
                     <div
                         class="draggable"
                         draggable="true"
@@ -171,6 +160,13 @@
                 <input type="range" min="1" max="8" bind:value={sunBurstOptions.rootColumns} onchange={() => displayOptionsChanged()} data-tooltip={sunBurstOptions.rootColumns}/>
                 <small><em>If root is an array, choose how many diagrams to render on the same row. </em></small>
             </label>
+            <label>
+                <input type="checkbox" role="switch" 
+                    bind:checked={sunBurstOptions.displayEmpty} onchange={() => displayOptionsChanged()}  /> Display Empty levels
+            </label>
+            <small >
+                <em>If true, include models that doesn't have an application assigned.</em>
+            </small>
         </div>
 
     </article>

@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { setData } from "$lib/datastore.svelte";
-    import type { Entity, GraphData, NodeRelation } from "$lib/types";
+    import { goto } from "$app/navigation";
+    import { addOrUpdateDataStore, type Entity } from "$lib/components/db/dexie";
+    import type { GraphData, NodeRelation } from "$lib/types";
+    
     import Papa from "papaparse";
     let loadType = $state("csv" as "csv" | "db"  | "json");
 
@@ -11,7 +13,8 @@
     let showLabelSelector = $state(false);
     let csvIdentityLabel: string = $state("name" as string);
 
-    function loadCsv(){
+
+    async function loadCsv(){
         const dataGraph = flatCsvToGraph(rawCsvRows, selectedLabels);
         if (dataGraph.nodes.length === 0) {
             alert('No data found.');
@@ -19,7 +22,7 @@
         }
 
         // const nodeTree = generateNodeTree(groupedData);
-        setData(dataGraph);
+        await addOrUpdateDataStore(dataGraph);
     }
 
     const canAddLabel = () => {
@@ -147,6 +150,11 @@
             await loadFromDb();
         }
 
+        else if(loadType === "json"){
+            
+            
+        }
+
 
         showLabelSelector = false;
 
@@ -174,11 +182,11 @@
 
         console.log("Graph data from DB:", graphData);
 
-        setData(graphData);
+        await addOrUpdateDataStore(graphData);
         
     }
 
-    function onFileSelect(event: Event) {
+    async function onFileSelect(event: Event) {
         const target = event.target as HTMLInputElement | null;
         if (!target?.files?.length) {
             console.error('No file selected');
@@ -190,22 +198,21 @@
         const fileExtension = file.name.split('.').pop()?.toLowerCase();
         if (fileExtension === 'csv') {
             loadType = "csv";
-            readCsv(file);
+            await readCsv(file);
             
         } else if (fileExtension === 'json') {
             loadType = "json";
-            readJson(file);
+            await readJson(file);
         } else {
             console.error('Unsupported file type:', fileExtension);
         }
     }
 
-    function readJson(file: File) {
+    async function readJson(file: File) {
         const reader = new FileReader();
 
         labels = [];
         selectedLabels = [];
-
         const jsonGraphData: GraphData = {
             nodes: [],
             relationships: []
@@ -229,15 +236,23 @@
 
             labelConstrains = [];
             selectedLabels = labels[0] ? [labels[0]] : [];
-            showLabelSelector = true;
         };
 
         reader.readAsText(file);
 
-        setData(jsonGraphData);
+        await new Promise((resolve) => {
+            reader.onloadend = resolve;
+        });
+
+        await addOrUpdateDataStore(jsonGraphData);
+        
+        console.log("Graph data from JSON:", jsonGraphData);
+
+        goto('/', { replaceState: true });
+
     }
 
-    function readCsv(file: File) {
+    async function readCsv(file: File) {
         const reader = new FileReader();
 
         rawCsvRows = [];
@@ -267,6 +282,10 @@
 
         reader.readAsArrayBuffer(file);
 
+        await new Promise((resolve) => {
+            reader.onloadend = resolve;
+        });
+
     }
 
 </script>
@@ -290,7 +309,7 @@
 </main>
 {:else}
 <div >
-    <h3>Select Labels</h3>
+    <small><em>This section is required to select which columns are marked as labels and which to determine metadata from actual node-data.</em></small>
     {#if loadType === "csv"}
          Select identity label:
         <select bind:value={csvIdentityLabel}>
@@ -300,7 +319,6 @@
             {/each}
         </select>
         <br>
-    {/if}
     {#each selectedLabels as labelName, idx}
         <label>
             Level {idx+1}:
@@ -328,8 +346,12 @@
             {/if}
         </span>
     {/if}
+    {/if}
     <div role="group">
-        <button class="outline" onclick={() => selectedLabels.push('')} disabled={!canAddLabel() ? true : null}>Add Label</button>
+        {#if loadType === "csv"}
+            <button class="outline" onclick={() => selectedLabels.push('')} disabled={!canAddLabel() ? true : null}>Add Label</button>
+        {/if}
+        
         <button onclick={async () => await confirmColumnSelection()}>Load Data</button>
     </div>
 

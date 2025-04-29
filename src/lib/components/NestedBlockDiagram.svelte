@@ -2,12 +2,12 @@
 <script lang="ts">
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
-    import type { BlockNode, Entity, GraphData, RelationShip } from '$lib/types';
-    import { ConditionalFormattingStore, DisplayOpsStore, FilterDataStore, FilteredData, getConditionalRules, getData, getDisplayOptions } from '$lib/datastore.svelte';
-    import { defaultBoxModel, defaultTitleModel, wrap } from '$lib/d3Utils';
+    import type { BlockNode} from '$lib/types';
+    import { conditionalFormatting, diagramOptions, emptyOptions, getConditionalRules} from '$lib/datastore.svelte';
+    import { wrap } from '$lib/d3Utils';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-
+    import { db, type DiagramOptions } from './db/dexie';
     const { 
         root,
         updateTooltipText,
@@ -27,12 +27,16 @@
 
 
 
-
+     let displayOptions: DiagramOptions = $state({
+      ...emptyOptions,
+      diagramType: 'nestedblock',
+     })
 
 
     function drawNode(node: BlockNode, parentGroup: any) {
-      const options = getDisplayOptions().nestedBlockOptions;
-      const level = options.labelHierarchy.indexOf(node.label) || 0;
+      const options = displayOptions;
+      const levelIdx = options.labelHierarchy.indexOf(node.label) || 0;
+      const level = levelIdx > -1 ? levelIdx : 0; // Default to 0 if not found
       const isLeaf = level === options.labelHierarchy.length - 1;
 
       const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
@@ -48,7 +52,7 @@
       // Only use the last color if multiple rules are applied
       const borderColor = conditionalFormatting.findLast(rule => rule.styling.borderColor.isSet)?.styling.borderColor.color || fillColor || "#fff";
 
-      const titleModel = options.titleModel || defaultTitleModel;
+      const titleModel = options.titleModel || displayOptions.titleModel!;
 
       const group = parentGroup.append("g")
         .attr("data-nodename", node.name)
@@ -127,6 +131,7 @@
         }, orgData); // Start with the root node as the previous node
     }
 
+    let initialized = $state(false); // Flag to check if the diagram is initialized
     
 
     onMount(() => {
@@ -138,13 +143,27 @@
           const color = picoColors[key];
           colors.set(key, [color]);
         });
+        
 
-        ConditionalFormattingStore.subscribe((data) => {
-          if (data) {
+        conditionalFormatting.subscribe((data) => {
+          if (data && initialized) {
+            console.log("Conditional formatting data: ", data); // Log the conditional formatting data for debugging
             drawBlockDiagram(root, d3.select(group));
           }
         });
 
+        diagramOptions.subscribe((state) => {
+          const currentOptions = state.find((option) => option.diagramType === 'nestedblock');
+          if (currentOptions && initialized) {
+            displayOptions = currentOptions;
+            drawBlockDiagram(root, d3.select(group));
+          }
+        });
+
+        drawBlockDiagram(root, d3.select(group));
+
+
+        initialized = true; // Set initialized to true after the first render
 
     });
 

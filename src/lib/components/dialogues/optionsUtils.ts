@@ -1,4 +1,5 @@
-import type { Entity, GraphData, RelationShipsOption } from "$lib/types";
+import type { GraphData, RelationShipsOption } from "$lib/types";
+import type { Entity } from "../db/dexie";
 
 
 export function buildRelationShipMap(data: GraphData): Map<string, RelationShipsOption[]> {

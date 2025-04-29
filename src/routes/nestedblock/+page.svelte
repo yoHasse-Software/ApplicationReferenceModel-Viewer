@@ -1,11 +1,13 @@
 <script lang="ts">
     import { onDestroy, onMount, tick } from 'svelte';
     import NestedBlockDiagram from '$lib/components/NestedBlockDiagram.svelte';
-    import { DisplayOpsStore, FilteredData, getData, getDisplayOptions } from '$lib/datastore.svelte';
-    import { type BlockNode, type ColorPalette, type NestedBlockOptions } from '$lib/types';
+    import { type BlockNode, type ColorPalette } from '$lib/types';
     import { buildHierarchy, computeNestedBlockPosition, computeNestedBlockSize, defaultColorPalette } from '$lib/d3Utils';
     import * as d3 from 'd3';
     import { getPicoColors } from '$lib/colorUtils';
+    import { db, type DiagramOptions } from '$lib/components/db/dexie';
+    import { diagramOptions, openDialogue } from '$lib/datastore.svelte';
+    import Dexie from 'dexie';
     
     // Example grouped data based on your CSV
     let svgContainer: SVGSVGElement;
@@ -21,22 +23,37 @@
         return { xRootOffset: 0, yRootOffset: 0 };
     }
 
-    async function buildNestedBlockDiagram(nestedBlockOptions: NestedBlockOptions) {
+
+    async function buildNestedBlockDiagram(nestedBlockOptions: DiagramOptions) {
         calculating = true; // Set calculating to true when starting the calculation
-        const data = getData();
         rootNodes = [];
         await tick(); // Wait for the DOM to update before proceeding
-        rootNodes = buildHierarchy(data.nodes, data.relationships, 'nestedblock', nestedBlockOptions.rootAtLabel);
+        const data = await db.enteties
+          .where('label')
+          .anyOfIgnoreCase(nestedBlockOptions.labelHierarchy)
+          .toArray(); // Fetch data from the database
 
-        console.log("Root nodes: ", rootNodes); // Log the root nodes for debugging
+        const ids = data.map((d) => d.id); // Extract IDs from the data
+        const relationships = await db.relationships
+            .where('to').anyOf(ids)
+            .or('from').anyOf(ids)
+            .and((relationship) => relationship.type === '->') // Filter relationships based on the reversed property
+            .toArray(); // Filter relationships based on the IDs
+            
+        console.log('Data:', data.length); // Log the fetched data
+        console.log('Relationships:', relationships.length); // Log the fetched relationships
+            
+        rootNodes = await buildHierarchy(data, relationships, nestedBlockOptions); // Build the hierarchy based on the data and relationships
 
-        
+        console.log('Root Nodes:', rootNodes); // Log the root nodes
+        calculating = false; // Set calculating to false when done
+
         for (let index = 0; index < rootNodes.length; index++) {
           const node = rootNodes[index];
-          computeNestedBlockSize(node, nestedBlockOptions.labelHierarchy, nestedBlockOptions.titleModel, nestedBlockOptions.boxModel); // Compute the size of the fake root node
+          computeNestedBlockSize(node, nestedBlockOptions.labelHierarchy, nestedBlockOptions); // Compute the size of the fake root node
 
           const previousNode = index > 0 ? rootNodes[index - 1] : undefined; // Get the previous node
-          computeNestedBlockPosition(node, undefined, nestedBlockOptions.titleModel, nestedBlockOptions.boxModel, previousNode); // Compute the position of the node
+          computeNestedBlockPosition(node, undefined, nestedBlockOptions, previousNode); // Compute the position of the node
         }
 
         calculating = false; // Set calculating to false when done
@@ -48,6 +65,7 @@
 
     let colors: ColorPalette = $state(defaultColorPalette);
 
+    let optionsValid = $state(false); // Flag to check if options are valid
 
     onMount(async () => {
 
@@ -57,10 +75,16 @@
       const cssRoot = getComputedStyle(document.documentElement);
       colors = getPicoColors(cssRoot);
 
-
-      DisplayOpsStore.subscribe(async (state) => {
-          if (state.nestedBlockOptions) {
-              await buildNestedBlockDiagram(state.nestedBlockOptions);
+      diagramOptions.subscribe(async (state) => {
+          const currentOptions = state.find((option) => option.diagramType === 'nestedblock');
+          if (currentOptions) {
+              if(currentOptions.labelHierarchy.length === 0) {
+                optionsValid = false; // Set optionsValid to false if no labels are selected
+                openDialogue.set('nestedblockoptions', true); // Open the dialogue to select labels
+              }else{
+                optionsValid = true; // Set optionsValid to true if labels are selected
+                await buildNestedBlockDiagram(currentOptions);
+              }
           }
       });
       
@@ -86,7 +110,7 @@
 
   <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
     <g bind:this={groupContainer} >
-      {#if !calculating}
+      {#if !calculating && optionsValid}
       {#each rootNodes as node, idx}
           {@const { xRootOffset, yRootOffset } = getRootPosition(node, idx) } 
 
@@ -98,6 +122,7 @@
       {/if}
     </g>
   </svg>
+
   
 
 

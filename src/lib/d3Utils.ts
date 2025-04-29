@@ -1,27 +1,8 @@
 import * as d3 from "d3";
-import type { BlockNode, BoxModel, ColorPalette, DiagramTypes, Entity, FontSettings, NestedBlockOptions, RelationShip, TitleModel } from "./types";
-import { getDisplayOptions } from "./datastore.svelte";
+import type { BlockNode, BoxModel, ColorPalette, DiagramTypes, FontSettings, TitleModel } from "./types";
+import type { DiagramOptions, Entity, RelationShip } from "./components/db/dexie";
+import { defaultBoxModel, defaultTitleModel, relationships } from "./datastore.svelte";
 
-
-export const defaultBoxModel: BoxModel = {
-  minWidth: 100,
-  minHeight: 40,
-  spacing: 10
-}
-
-export const defaultTitleModel: TitleModel = {
-  fontSettings: {
-    fontSize: 24,
-    fontFamily: 'Arial, Helvetica, sans-serif',
-    fontWeight: 'normal',
-  },
-  offsets: {
-    top: 10,
-    bottom: 0,
-    left: 10,
-    right: 0,
-  },
-}
 
 export const defaultColorPalette: ColorPalette = {
   primary: "#007bff",
@@ -136,89 +117,118 @@ export function wrap(text: d3.Selection<SVGTextElement, unknown, null, undefined
         });
       }
 
-/** Build a hierarchical structure from flat nodes / relationships */
 
-const getLabelsHeirarchyFromDiagramType = (diagramType: DiagramTypes) => {
-  switch (diagramType) {
-    case 'nestedblock':
-      return getDisplayOptions().nestedBlockOptions.labelHierarchy;
-    case 'graph':
-      return [];
-    case 'sunburst':
-      return getDisplayOptions().sunBurstOptions.labelHierarchy;
-    default:
-      return [];
-  } 
-};
-
-const displayEmpty = (diagramType: DiagramTypes) => {
-  switch (diagramType) {
-    case 'nestedblock':
-      return getDisplayOptions().nestedBlockOptions.displayEmpty;
-    case 'graph':
-      return true;
-    case 'sunburst':
-      return true; // Sunburst always displays empty nodes
-    default:
-      return false;
-  } 
-}
-
-const isLeaf = (node: BlockNode, leafLabel: string) => {
-  return node.label === leafLabel && (!node.children || node.children.length === 0);
-};
-
-
-function hasLeafs(node: BlockNode, leafLabel: string): boolean {
-  if(isLeaf(node, leafLabel)) {
-    console.log("hasLeafs", node.id, node.label, leafLabel);
+function subNodesContainsId(node: BlockNode, id: string): boolean {
+  if (node.id === id) {
+    console.warn("Found node with id", id, node.id);
     return true;
   }
-  if(node.children && node.children.length > 0) {
-    return node.children.some(child => hasLeafs(child, leafLabel));
+  if (!node.children) {
+    return false;
+  }
+  for (const child of node.children) {
+    if (subNodesContainsId(child, id)) {
+      return true;
+    }
   }
   return false;
-};
+}
 
-
-
-
-export function buildHierarchy(nodes: Entity[], 
+export async function buildHierarchy(nodes: Entity[], 
     relationships: RelationShip[], 
-    diagramType: DiagramTypes, 
-    rootStartsAt: string = 'root') : BlockNode[] {
+    options: DiagramOptions) : Promise<BlockNode[]> {
 
-  const labelHierarchy = getLabelsHeirarchyFromDiagramType(diagramType) || [];
-  const displayEmptyNodes = displayEmpty(diagramType);
+  const labelHierarchy = options.labelHierarchy;
+  if(!labelHierarchy || labelHierarchy.length === 0) {
+    throw new Error("Label hierarchy is not defined or empty.");
+  }
+  const displayEmptyNodes = options.displayEmpty || false; // Get the displayEmpty option from the diagram options
   const leafLabel = labelHierarchy[labelHierarchy.length - 1]; // Get the last label in the hierarchy
 
-  console.log("leafLabel", leafLabel);
-  const nodeMap = new Map(
-    nodes.map((n) => [
-      n.id,
-      {
-        ...n,
-        children: [] as BlockNode[],
-        value: labelHierarchy.findIndex((l) => l === n.label) + 1,
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0
+  console.log("started");
+
+  type RelationShipTracking = {
+    id: string;
+    parents: string[];
+    children: string[];
+  };
+
+  const prom = new Promise<Map<string, BlockNode>>((resolve, reject) => {
+
+    const nodeMap: Map<string, BlockNode> = new Map(
+      nodes.map((n) => [
+        n.id,
+        {
+          ...n,
+          children: [] as BlockNode[],
+          value: labelHierarchy.findIndex((l) => l === n.label) + 1,
+          width: 0,
+          height: 0,
+          x: 0,
+          y: 0
+        }
+      ])
+    );
+
+    let count = 0;
+
+    const nodesToHandle: string[] = nodes.sort((a, b) => {
+      const aIndex = labelHierarchy.findIndex((l) => l === a.label);
+      const bIndex = labelHierarchy.findIndex((l) => l === b.label);
+      return aIndex - bIndex;
+    }).filter(n => relationships.every((r) => r.to !== n.id))
+    .map(n => n.id); // Get the first node for each label as the root node;
+    const handeledNodes: string[] = [];
+
+    while(nodesToHandle.length > 0 && count < 10000) {
+      count++;
+      const nodeId = nodesToHandle.shift()!; // Get the first node to handle
+      const node = nodeMap.get(nodeId); // Get the node from the map
+      if (!node) {
+        console.warn(`Node with id ${nodeId} not found in nodeMap`);
+        continue; // Skip if the node is not found
       }
-    ])
-  );
 
-  relationships.forEach((rel) => {
-    const from = rel.type !== 'SUPPORTS' ? rel.from : rel.to; // Need to fix this, can't have this workaround
-    const to = rel.type !== 'SUPPORTS' ? rel.to : rel.from;
+      if(handeledNodes.includes(nodeId)) {
+        console.warn(`Node with id ${node.name} already handled`);
+        continue; // Skip if the node is already handled
+      }
 
-    const parent = nodeMap.get(from);
-    const child = nodeMap.get(to);
-    if (parent && child 
-        && !parent.children.some((c) => c.id === child.id)) {
-      parent.children.push(child);
+      const relationshipsToNode = relationships.filter((r) => r.from === nodeId).map((r) => r.to); // Get the relationships to the node
+      if (relationshipsToNode.length === 0) {
+        handeledNodes.push(nodeId); // Add the node to the handled nodes
+        console.warn(`Node with id ${node.name} has no relationships`);
+        continue; // Skip if there are no relationships to the node
+      }
+
+      const children = relationshipsToNode
+        .map((childId) => nodeMap.get(childId))
+        .filter((child) => child !== undefined);
+
+
+      if (children.length === 0) {
+        handeledNodes.push(nodeId); // Add the node to the handled nodes
+        console.warn(`Node with id ${node.name} has no children`);
+        continue; // Skip if there are no children
+      }
+      node.children = children; // Set the children of the node
+
+      nodeMap.set(nodeId, node); // Update the node in the map
+      handeledNodes.push(nodeId); // Add the node to the handled nodes
+      nodesToHandle.push(...children.map((child) => child.id)); // Add the children to the nodes to handle
     }
+
+
+    if (count >= 5000) {
+      console.warn("Infinite loop detected in buildHierarchy", count, nodesToHandle.length, handeledNodes.length);
+      return reject(new Error("Infinite loop detected in buildHierarchy"));
+    }
+
+    return resolve(nodeMap); // Resolve the promise when done
   });
+
+  const nodeMap = await prom;
+  console.log("Finished");
 
   // ------------------------------------------------------------
   // 1. Prune branches that contain no leaf when displayEmptyNodes
@@ -240,27 +250,25 @@ export function buildHierarchy(nodes: Entity[],
       // Keep this node only when something survived underneath it
       return node.children?.length > 0; 
     };
-
     // Run the prune pass once over every node
     nodeMap.forEach(prune);
+    
   }
-
 
   // Remove empty nodes if displayEmpty is false
 
-  const rootLabel = rootStartsAt === 'root' ? labelHierarchy[0] : rootStartsAt;
-
+  const rootLabel = !options.rootAtLabel || options.rootAtLabel === 'root' ? labelHierarchy[0] :  options.rootAtLabel; // Get the root label from the diagram options;
+  
   const roots: BlockNode[] = Array.from(nodeMap.values()).filter(
     (n) => {
       const isMatch = (n.label === rootLabel || n.label === 'default');
       const hasChildren = n.children && n.children.length > 0;
       return isMatch && (displayEmptyNodes ? true : hasChildren)
-
     }
   );
 
 
-  if (rootStartsAt === 'root') {
+  if (options.rootAtLabel === 'root') {
     const singularRoot: BlockNode = {
       id: 'root',
       name: '-',
@@ -289,8 +297,15 @@ const labelHeight = (titleModel: TitleModel) =>
 export function computeNestedBlockSize(
     node: BlockNode, 
     labelHierarchy: string[], 
+    options: DiagramOptions,
+    count: number = 0,
     titleModel: TitleModel | undefined = undefined, 
     blockModel: BoxModel | undefined = undefined): { width: number, height: number } {
+
+  if(count > 50) { // Prevent infinite loop
+    console.error("Infinite loop detected in computeNestedBlockSize", node.id, count);
+    return { width: 0, height: 0 }; // Return zero size to avoid infinite loop
+  }
 
   const titleBoxModel: TitleModel = titleModel || defaultTitleModel;
   const boxModel: BoxModel = blockModel || defaultBoxModel;
@@ -310,13 +325,13 @@ export function computeNestedBlockSize(
 
   const childHeights = new Map<string, number>(); // Map to store the heights of each row group
   const childLabel = node.children[0].label || ""; // Get the label of the first child node
-  const childColumns = getDisplayOptions().nestedBlockOptions.columnsPerLabel[childLabel] || 1; // Get the number of columns for the child node label
+  const childColumns = options.columnsPerLabel[childLabel] || 1; // Get the number of columns for the child node label
 
   let maxChildWidth = 0; // Variable to store the maximum width of child nodes
 
   node.children.forEach((child, idx) => {
 
-    const childSize = computeNestedBlockSize(child,labelHierarchy,titleModel, blockModel);
+    const childSize = computeNestedBlockSize(child,labelHierarchy, options, count++, titleBoxModel, boxModel);
     // Gör något med detta... kanske. Problemet är att visa columner är bredare än andra i samma column...
     maxChildWidth = Math.max(maxChildWidth, childSize.width); // Update the maximum width of child nodes
     if(idx < childColumns ){ // Stop adding width if we have reached the max columns
@@ -368,16 +383,15 @@ export function computeNestedBlockSize(
 export function computeNestedBlockPosition(
     node: BlockNode, 
     parentNode: BlockNode | undefined,
-    titleModel: TitleModel | undefined = undefined,
-    blockModel: BoxModel | undefined = undefined,
+    options: DiagramOptions,
     previousNode: BlockNode | undefined = undefined) {
 
-  const boxModel: BoxModel = blockModel || defaultBoxModel;
-  const titleBoxModel: TitleModel = titleModel || defaultTitleModel;
+  const boxModel: BoxModel = options.boxModel || defaultBoxModel;
+  const titleBoxModel: TitleModel = options.titleModel || defaultTitleModel;
 
   const isRoot = !parentNode; // Check if the node is a root node
   const thisIndex = isRoot ? 0 : parentNode.children!.findIndex(n => n.id === node.id); // Get the index of the current node in the parent's children array
-  const nodeColumns = getDisplayOptions().nestedBlockOptions.columnsPerLabel[node.label] || 1; // Get the number of columns for the node label
+  const nodeColumns = options.columnsPerLabel[node.label] || 1; // Get the number of columns for the node label
 
   const newRow = thisIndex % nodeColumns === 0; // Check if the current node is the first in a new row
 
@@ -423,7 +437,7 @@ export function computeNestedBlockPosition(
     const child = node.children[i];
     const previousChild = i > 0 ? node.children[i - 1] : undefined; // Get the previous child node
 
-    computeNestedBlockPosition(child, node, titleBoxModel, boxModel, previousChild);
+    computeNestedBlockPosition(child, node, options, previousChild);
   }
 
 }

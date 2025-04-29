@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { getData, RuleOperatoruleOptions } from "$lib/datastore.svelte";
-    import type { ConditionalFormatting } from "$lib/types";
+    import { enteties, RuleOperatoruleOptions } from "$lib/datastore.svelte";
     import { onMount } from "svelte";
+    import { db, type ConditionalFormatting } from "../db/dexie";
 
 
 
@@ -16,7 +16,7 @@
     let labels: string[] = $state([]);
 
 
-    function generateMetaKeyOptions(initialize: boolean = false) {
+    async function generateMetaKeyOptions(initialize: boolean = false) {
         if(!rule.label) {
             console.log("No label selected");
             return;
@@ -35,9 +35,9 @@
             rule.value = "";
         }
 
-        const data = getData();
+        const data = await db.enteties.toArray();
 
-        const metaKeyOptionsRes = data.nodes.filter((node) => node.label === rule.label)
+        const metaKeyOptionsRes = data.filter((node) => node.label === rule.label)
             .flatMap((node) => {
                 const nodeKeys = Object.keys(node).filter((key) => key !== metadataKey);
                 const metadataKeys = Object.keys(node.metadata);
@@ -52,7 +52,7 @@
         metaKeyOptions = [...new Set(metaKeyOptionsRes)];
     }
 
-    function generateValueSelection(initialize: boolean = false) {
+    async function generateValueSelection(initialize: boolean = false) {
         if(!rule.label || !rule.metadataKey) {
             return;
         }
@@ -65,8 +65,8 @@
             rule.value = "";
         }
         // Order by value
-        const data = getData();
-        const nodeDataValueMap = data.nodes.filter((node) => {
+        const data = await db.enteties.toArray();
+        const nodeDataValueMap = data.filter((node) => {
             return node.label === rule.label && rule.metadataKey && ((rule.metadataKey in node) || node.metadata[rule.metadataKey]);
         }).map((node) => {
             const metadataKey = (rule.metadataKey in node) 
@@ -89,15 +89,17 @@
     }
 
 
-    onMount(() => {
+    onMount(async () => {
         // Initialize the map with the current rule's label
-        labels = getData().nodes.map((node) => node.label).filter((label, index, self) => label && self.indexOf(label) === index).sort((a, b) => {
-            if (a < b) return -1;
-            if (a > b) return 1;
-            return 0;
+        enteties.subscribe((value) => {
+            labels = value.map((node) => node.label).filter((label, index, self) => label && self.indexOf(label) === index).sort((a, b) => {
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
         });
-        generateMetaKeyOptions(true);
-        generateValueSelection(true);
+        await generateMetaKeyOptions(true);
+        await generateValueSelection(true);
         
 
 

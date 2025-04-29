@@ -1,10 +1,11 @@
 <script lang="ts">
     import { onDestroy, onMount, tick } from 'svelte';
     import * as d3 from 'd3';
-    import type { BlockNode, ConditionalFormatting, LabelHierarchy } from '$lib/types';
+    import type { BlockNode, LabelHierarchy } from '$lib/types';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import { getConditionalRules, getDisplayOptions } from '$lib/datastore.svelte';
+    import { diagramOptions, emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
+    import type { ConditionalFormatting, DiagramOptions } from './db/dexie';
 
 
     const { 
@@ -44,7 +45,7 @@
 
     const colors = new SvelteMap<string, string>();
 
-    const sunBurstOptions = $state(getDisplayOptions().sunBurstOptions);
+    let sunBurstOptions: DiagramOptions = $state(emptyOptions);
     const conditionalFormattingRuleMap = new SvelteMap<string, ConditionalFormatting[]>();
     
     function getColor(n: string) {
@@ -231,10 +232,6 @@
   
         textsEnter.merge(texts as any)
           .text((d: any) => d.data.name)
-          // clear & wrap *before* transform so width calc is correct
-        //   .each(function (d) {
-        //     sunBurstWrap(d3.select(this), labelWidth(d));
-        //   })
           .attr('transform', labelTransform as any)
           .transition()
           .duration(300)
@@ -260,8 +257,15 @@
         return;
       }
 
+      diagramOptions.subscribe(async (state) => {
+        const currentOptions = state.find((option) => option.diagramType === 'sunburst');
+        if (currentOptions) {
+          sunBurstOptions = currentOptions;
+          
+          await render(d3.hierarchy(root));
+        }
+      });
 
-      await render(d3.hierarchy(root));
 
     });
 

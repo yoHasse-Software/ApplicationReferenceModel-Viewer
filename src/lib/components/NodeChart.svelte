@@ -2,27 +2,30 @@
 
 
 <script lang="ts">
-    import { Data } from "$lib/datastore.svelte";
     import { SimulationLink, SimulationNode } from "$lib/models/SimulationNode";
     import * as d3 from 'd3';
     import { onMount } from "svelte";
+    import { db } from "./db/dexie";
 
 
     let svgContainer: SVGSVGElement;
 
-    function createSimulationNodes(){
+    async function createSimulationNodes(){
         const width = 928;
         const height = 680;
+
+        const data = await db.enteties.toArray();
+        const relationships = await db.relationships.toArray();
 
         // Specify the color scale.
         const color = d3.scaleOrdinal(d3.schemeCategory10);
 
         // The force simulation mutates links and nodes, so create a copy
         // so that re-evaluating this cell produces the same result.
-        const links = Data.relationships.map(d => {
+        const links = relationships.map(d => {
 
-            const from = Data.nodes.find(node => node.id === d.from);
-            const to = Data.nodes.find(node => node.id === d.to);
+            const from = data.find(node => node.id === d.from);
+            const to = data.find(node => node.id === d.to);
             if (!from || !to) {
                 throw new Error(`Node not found for id: ${d.from} or ${d.to}`);
             }
@@ -33,7 +36,7 @@
             return new SimulationLink(fromNode, toNode, d.metadata)
 
         });
-        const nodes = Data.nodes.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
+        const nodes = data.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
 
         
 
