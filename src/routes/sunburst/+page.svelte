@@ -40,7 +40,6 @@ import SunBurst from "$lib/components/SunBurst.svelte";
         const relationships = await db.relationships
             .where('to').anyOf(ids)
             .or('from').anyOf(ids)
-            .and((relationship) => relationship.type === '->')
             .toArray();
         rootNodes = [];
         rootNodes = await buildHierarchy(data, relationships, sunBurstOptions);

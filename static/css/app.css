@@ -83,14 +83,17 @@
 
 
 .droppable {
-  height: 100%;
   padding: 0.5rem;
-  /* border-radius: 0.5rem; */
   background-color: #f0f0f0;
   color: var(--pico-color-contrast);
   border: 2px dashed #ccc;
   cursor: pointer;
   margin-bottom: 0.5rem;
+
+}
+
+.droppable::after {
+  height: 100%;
 
 }
 
@@ -100,6 +103,14 @@
 
 .droppable:hover {
   background-color: #e0e0e0;
+}
+
+.heirarchy-options-article {
+  max-height: 20rem;
+}
+.heirarchy-options {
+  max-height: 15rem;
+  overflow-y: auto;
 }
 
 
@@ -185,4 +196,8 @@
 
 .ico-arrow-bar-right {
   --svg: url('../icons/tabler/arrow-bar-right.svg');
+}
+
+.ico-database {
+  --svg: url('../icons/tabler/database.svg');
 }

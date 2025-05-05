@@ -85,8 +85,8 @@
         <button aria-label="edit-conditional-format" data-tooltip="Open conditional formatting" data-placement="right" onclick={() => openDialogue.set('conditionalformatting', true)} >
             <span class="ico ico-wand"></span>
         </button>
-        <button aria-label="delete-data" data-tooltip="Clear all data" data-placement="right" onclick={onClearData} >
-            <span class="ico ico-x"></span>
+        <button aria-label="data-options" data-tooltip="Data options" data-placement="right" onclick={() => goto('/loadData')} >
+            <span class="ico ico-database"></span>
         </button>
     {/if}
 

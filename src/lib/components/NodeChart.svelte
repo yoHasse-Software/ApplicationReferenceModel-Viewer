@@ -7,21 +7,20 @@
     import { onMount } from "svelte";
     import { db } from "./db/dexie";
 
-
-    let svgContainer: SVGSVGElement;
+    let group: SVGGElement;
 
     async function createSimulationNodes(){
-        const width = 928;
-        const height = 680;
+        const data = (await db.enteties.toArray()).map(d => ({...d}));
+        const relationships = (await db.relationships.toArray()).map(d => ({...d}));
 
-        const data = await db.enteties.toArray();
-        const relationships = await db.relationships.toArray();
+        console.log(relationships);
 
         // Specify the color scale.
         const color = d3.scaleOrdinal(d3.schemeCategory10);
 
         // The force simulation mutates links and nodes, so create a copy
         // so that re-evaluating this cell produces the same result.
+
         const links = relationships.map(d => {
 
             const from = data.find(node => node.id === d.from);
@@ -33,12 +32,14 @@
             const fromNode = new SimulationNode(from.id, from.name, from.label, from.metadata);
             const toNode = new SimulationNode(to.id, to.name, to.label, to.metadata);
 
-            return new SimulationLink(fromNode, toNode, d.metadata)
+            return new SimulationLink(fromNode, toNode)
 
         });
         const nodes = data.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
 
-        
+
+        console.log(links);
+
 
         // Create a simulation with several forces.
         const simulation = d3.forceSimulation(nodes)
@@ -50,7 +51,7 @@
         // Create the SVG container.
 
         // Add a line for each link, and a circle for each node.
-        const link = d3.select(svgContainer).append("g")
+        const link = d3.select(group).append("g")
             .attr("stroke", "#999")
             .attr("stroke-opacity", 0.6)
             .selectAll("line")
@@ -58,7 +59,7 @@
             .join("line")
             .attr("stroke-width", d => Math.sqrt(d.value));
 
-        const node = d3.select(svgContainer).append("g")
+        const node = d3.select(group).append("g")
             .attr("stroke", "#fff")
             .attr("stroke-width", 1.5)
             .selectAll("circle")
@@ -68,7 +69,7 @@
             .attr("fill", d => color(d.type));
 
         node.append("title")
-            .text(d => d.id);
+            .text(d => d.name);
 
         // Add a drag behavior.
         (node as d3.Selection<SVGCircleElement, SimulationNode, SVGGElement, unknown>)
@@ -120,16 +121,16 @@
 
 
       // Specify the dimensions of the chart.
-    onMount(() => {
-        const svg = d3.select(svgContainer);
+    onMount(async () => {
+        await createSimulationNodes();
     });
 
 
 </script>
 
 
-<svg bind:this={svgContainer} class="node-chart" width="928" height="680" viewBox="-464 -340 928 680" style="max-width: 100%; height: auto;"></svg>
-
+<g bind:this={group}>
+</g>
 
 
 

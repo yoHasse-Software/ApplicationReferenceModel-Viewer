@@ -1,9 +1,12 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { addOrUpdateDataStore, type Entity } from "$lib/components/db/dexie";
+    import { addOrUpdateDataStore, openStore, type DataBaseOptions, type Entity } from "$lib/components/db/dexie";
+    import { getLocalStore } from "$lib/components/localStore.svelte";
     import type { GraphData, NodeRelation } from "$lib/types";
+    import Dexie from "dexie";
     
     import Papa from "papaparse";
+    import { onMount, tick } from "svelte";
     let loadType = $state("csv" as "csv" | "db"  | "json");
 
     let rawCsvRows: Array<Record<string, string>> = $state([]);
@@ -12,6 +15,9 @@
     let selectedLabels: string[] = $state([""]);
     let showLabelSelector = $state(false);
     let csvIdentityLabel: string = $state("name" as string);
+    let storeName = $state("");
+    let storeNames: string[] = $state([]);
+    let currentStore: string = $state("");
 
 
     async function loadCsv(){
@@ -22,7 +28,7 @@
         }
 
         // const nodeTree = generateNodeTree(groupedData);
-        await addOrUpdateDataStore(dataGraph);
+        await addOrUpdateDataStore(storeName, dataGraph);
     }
 
     const canAddLabel = () => {
@@ -182,7 +188,7 @@
 
         console.log("Graph data from DB:", graphData);
 
-        await addOrUpdateDataStore(graphData);
+        await addOrUpdateDataStore(storeName, graphData);
         
     }
 
@@ -244,7 +250,7 @@
             reader.onloadend = resolve;
         });
 
-        await addOrUpdateDataStore(jsonGraphData);
+        await addOrUpdateDataStore(storeName, jsonGraphData);
         
         console.log("Graph data from JSON:", jsonGraphData);
 
@@ -288,24 +294,73 @@
 
     }
 
+    async function openDbStore(store: string) {
+        storeName = store;
+
+        await openStore(store);
+        await tick();
+        location.reload(); // Reload the page to apply changes
+    }
+
+
+    onMount(async () => {
+        storeNames = await Dexie.getDatabaseNames() || [];
+        currentStore = getLocalStore<DataBaseOptions>('database-options').value.selectedDb;
+    });
+
 </script>
 
 
 {#if !showLabelSelector}
 <main>
+    <div style="height: 80vh;justify-content: center; align-items: center; margin: 5rem;">
+    <article>
+        <header>
+            <h2>Loaded Data</h2>
+        </header>
+        {currentStore || 'No data loaded'}
+    </article>
+    <div class="grid" >
+        
     <article>
         <header>
             <span><strong>Select data to start</strong></span>
         </header>
+        <label>
+            <span data-tooltip="Select a data store to load data from">Load new store</span>
+            <input type="text" bind:value={storeName} placeholder="Enter data name" />
+            <small><em>Enter a name for the data store to be able to switch</em></small>
+        </label>
         <label> 
             <span data-tooltip="Select a file to load data from">Load from csv or json file</span>
-            <input style="margin:auto" type="file" accept=".csv, .json" onchange={onFileSelect} />
+            <input style="margin:auto" disabled={storeName.trim().length > 3 ? null : true} type="file" accept=".csv, .json" onchange={onFileSelect} />
         </label>
-        <p>Or load from database</p>
-        <div style="float:left;" >
-            <button class="secondary" onclick={onDbSelect} >Load from database</button>
-        </div>
     </article>
+    <article>
+        <header>
+            <span><strong>Load data from database</strong></span>
+        </header>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: auto;">
+        {#each storeNames as store}
+            <button class="secondary" 
+            style="padding: unset; color: black;"
+            onclick={async () => {
+                await openDbStore(store);
+            }} >
+                <article style="margin-bottom: unset;">
+                    {store}
+                </article>
+        </button>
+
+        {/each}
+    </div>
+
+
+    </article>
+    </div>
+
+</div>
+
 </main>
 {:else}
 <div >

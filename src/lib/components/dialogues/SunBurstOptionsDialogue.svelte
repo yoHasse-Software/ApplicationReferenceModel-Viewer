@@ -3,10 +3,9 @@
     import {  diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
     import type { RelationShipsOption } from "$lib/types";
     import { lab } from "d3";
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
-    import { buildRelationShipMap } from "./optionsUtils";
-    import { db, type DiagramOptions } from "../db/dexie";
+    import { db, getAllLabels, labelsRelationShips, type DiagramOptions, type LabelRelationShips } from "../db/dexie";
     import Dexie from "dexie";
 
 
@@ -18,6 +17,7 @@
     let labelOptions: string[] = $state([]);
 
     const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
+    let labelToLabelRelationShips: LabelRelationShips[] = $state([]);
     let dialogueOnSide = $state(false);
 
     const dropped: string[] = $derived(sunBurstOptions.labelHierarchy || []);
@@ -28,28 +28,67 @@
         event.dataTransfer?.setData('text/plain', label);
     }
 
-    function handleDrop(event: DragEvent) {
+    async function handleDrop(event: DragEvent) {
         event.preventDefault();
         const label = event.dataTransfer?.getData('text/plain');
         if (label) {
             dropped.push(label);
+            sunBurstOptions.visibleLabels.push(label);
+            await tick();
+            await updateLabelOptions();
         }
-        displayOptionsChanged();
+        await displayOptionsChanged();
     }
 
-    function handledelete(idx: number) {
+    async function handledelete(idx: number) {
         if (idx >= 0 && idx < sunBurstOptions.labelHierarchy.length) {
             sunBurstOptions.labelHierarchy.splice(idx, 1);
             dropped.splice(idx, 1);
-            labelOptions.push(sunBurstOptions.labelHierarchy[idx]);
-            labelOptions = labelOptions.filter((label) => label !== sunBurstOptions.labelHierarchy[idx]);
-            displayOptionsChanged();
+            await tick();
+            await updateLabelOptions();
+            await displayOptionsChanged();
         }
     }
 
+    function getRelatedOptions(label: string) {
+        return labelToLabelRelationShips.filter((rel) => rel.fromLabel === label || rel.toLabel === label) || [];
+    }
+
+    async function updateLabelOptions() {
+        if(sunBurstOptions.labelHierarchy.length === 0){
+            const allLabels = await getAllLabels();
+            labelOptions = allLabels
+                .map((d) => d as string)
+                .filter((label) => label && label.length > 0)
+                .filter((label) => sunBurstOptions.labelHierarchy.indexOf(label) === -1)
+                .filter((label, index, self) => self.indexOf(label) === index)
+                .sort((a, b) => {
+                    if (a < b) return -1;
+                    if (a > b) return 1;
+                    return 0;
+                });
+            return;
+        }
+
+        labelToLabelRelationShips = await labelsRelationShips(sunBurstOptions.labelHierarchy);
+
+        const lastLabelInHierarchy = sunBurstOptions.labelHierarchy[sunBurstOptions.labelHierarchy.length - 1];
+        const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
+
+        labelOptions = relatedOptions
+            .filter((label) => label && label.length > 0)
+            .filter((label) => sunBurstOptions.labelHierarchy.indexOf(label) === -1)
+            .filter((label, index, self) => self.indexOf(label) === index)
+            .sort((a, b) => {
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+    }
+
+
 
     async function displayOptionsChanged() {
-        console.log("displayOptionsChanged", sunBurstOptions);
         await db.diagramOptions.put(Dexie.deepClone(sunBurstOptions));
     }
 
@@ -64,15 +103,8 @@
             }
         });
 
-        enteties.subscribe((data) => {
-            labelOptions = data.map((d) => d.label)
-            .filter((label) => sunBurstOptions.labelHierarchy.indexOf(label) === -1)
-            .filter((label) => label && label.length > 0)
-            .filter((label, index, self) => self.indexOf(label) === index).sort((a, b) => {
-                if (a < b) return -1;
-                if (a > b) return 1;
-                return 0;
-            });
+        enteties.subscribe(async (data) => {
+            await updateLabelOptions();
         })
      });
      
@@ -106,6 +138,8 @@
             <div class="grid">
                 <article>
                     <header>Label options</header>
+                    <div class="heirarchy-options">
+                    
                     {#each labelOptions as lbl, idx}
                     <div
                         class="draggable"
@@ -114,10 +148,12 @@
                         role="button"
                         tabindex="0" >{lbl}</div>
                     {/each}
-
+                    </div>
                 </article>
                 <article>
                     <header>Selected Heirarchy</header>
+                    <div class="heirarchy-options">
+
                     {#each sunBurstOptions.labelHierarchy as labelName, idx}
                         <div
                             class="dropped"
@@ -134,9 +170,35 @@
                         ondrop={handleDrop}
                         role="button"
                         tabindex="0" ><small><em>Drop next here</em></small></div>
+                    </div>
                 </article>
 
             </div>
+            <article>
+                <header>Relationship Modification</header>
+                {#each sunBurstOptions.labelHierarchy as label, idx}
+                    {#if idx > 0 && idx + 1 <= sunBurstOptions.labelHierarchy.length}
+                    <article>
+    
+                        <div class="grid" style="grid-template-columns: 1fr auto 1fr; gap: 1rem;">
+                            {sunBurstOptions.labelHierarchy[idx-1]} <select bind:value={sunBurstOptions.hierarchyRelMod[idx-1]} onchange={() => displayOptionsChanged()}>
+                                {#each labelToLabelRelationShips.filter((rel) => rel.fromLabel === sunBurstOptions.labelHierarchy[idx-1] && rel.toLabel === sunBurstOptions.labelHierarchy[idx]) as rel, idx}
+                                    <option value={rel.relationshipType}>
+                                        {#if rel.relationshipType === '->'}
+                                        &rarr;
+                                        {:else if rel.relationshipType === '<-'}
+                                        &larr;
+                                        {:else}
+                                        &harr;
+                                        {/if}
+                                    </option>
+                                {/each}
+                            </select> {sunBurstOptions.labelHierarchy[idx]}
+                        </div>
+                    </article>
+                    {/if}
+                {/each}
+                <small><em>Use to modify the relationship between the labels in the heirarchy</em></small>
         </article>
 
 

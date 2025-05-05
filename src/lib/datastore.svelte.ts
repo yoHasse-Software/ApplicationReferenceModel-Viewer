@@ -4,6 +4,7 @@ import { get, writable } from "svelte/store";
 import { db, type ConditionalFormatting, type DiagramOptions, type Entity } from "./components/db/dexie";
 import { liveQuery } from "dexie";
 
+
 // export const N1WIDTH = 1200;
 export const N2WIDTH = 1200;
 export const N3WIDTH = N2WIDTH * 0.3;
@@ -35,6 +36,7 @@ export const emptyOptions: DiagramOptions = {
   columnsPerLabel: {},
   visibleLabels: [],
   labelColors: {},
+  hierarchyRelMod: [],
   titleModel: defaultTitleModel,
   boxModel: defaultBoxModel,
   diagramType: "none"
@@ -72,10 +74,6 @@ export const openDialogue = new SvelteMap<DialogueOption, boolean>([
   ['helpoptions', false]
 ]);
 
-async function getLabelsForDiagramType(diagramType: DiagramTypes) {
-  return await db.diagramOptions.where('diagramType').equals(diagramType).first()
-}
-
 
 export const enteties = liveQuery(
     () => db.enteties.toArray() // Get all entities
@@ -98,9 +96,13 @@ export const diagramOptions = liveQuery(
 
 let inmemoryRules: ConditionalFormatting[] = $state([]);
 
-conditionalFormatting.subscribe((rules) => {
-  inmemoryRules = rules;
-});
+export function initialize(){
+  conditionalFormatting.subscribe((rules) => {
+    inmemoryRules = rules;
+  });
+}
+
+
 
 
 

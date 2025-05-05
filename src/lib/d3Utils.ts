@@ -144,92 +144,50 @@ export async function buildHierarchy(nodes: Entity[],
   }
   const displayEmptyNodes = options.displayEmpty || false; // Get the displayEmpty option from the diagram options
   const leafLabel = labelHierarchy[labelHierarchy.length - 1]; // Get the last label in the hierarchy
-
+  const relHeirarchy = options.hierarchyRelMod || []; // Get the relationship hierarchy from the diagram options
   console.log("started");
 
-  type RelationShipTracking = {
-    id: string;
-    parents: string[];
-    children: string[];
-  };
 
-  const prom = new Promise<Map<string, BlockNode>>((resolve, reject) => {
-
-    const nodeMap: Map<string, BlockNode> = new Map(
-      nodes.map((n) => [
-        n.id,
-        {
-          ...n,
-          children: [] as BlockNode[],
-          value: labelHierarchy.findIndex((l) => l === n.label) + 1,
-          width: 0,
-          height: 0,
-          x: 0,
-          y: 0
-        }
-      ])
-    );
-
-    let count = 0;
-
-    const nodesToHandle: string[] = nodes.sort((a, b) => {
-      const aIndex = labelHierarchy.findIndex((l) => l === a.label);
-      const bIndex = labelHierarchy.findIndex((l) => l === b.label);
-      return aIndex - bIndex;
-    }).filter(n => relationships.every((r) => r.to !== n.id))
-    .map(n => n.id); // Get the first node for each label as the root node;
-    const handeledNodes: string[] = [];
-
-    while(nodesToHandle.length > 0 && count < 10000) {
-      count++;
-      const nodeId = nodesToHandle.shift()!; // Get the first node to handle
-      const node = nodeMap.get(nodeId); // Get the node from the map
-      if (!node) {
-        console.warn(`Node with id ${nodeId} not found in nodeMap`);
-        continue; // Skip if the node is not found
+  const nodeMap: Map<string, BlockNode> = new Map(
+    nodes.map((n) => [
+      n.id,
+      {
+        ...n,
+        children: [] as BlockNode[],
+        value: labelHierarchy.findIndex((l) => l === n.label) + 1,
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0
       }
+    ])
+  );
 
-      if(handeledNodes.includes(nodeId)) {
-        console.warn(`Node with id ${node.name} already handled`);
-        continue; // Skip if the node is already handled
-      }
+  relationships.forEach((rel) => {
+    let parent = nodeMap.get(rel.from);
+    let child = nodeMap.get(rel.to);
 
-      const relationshipsToNode = relationships.filter((r) => r.from === nodeId).map((r) => r.to); // Get the relationships to the node
-      if (relationshipsToNode.length === 0) {
-        handeledNodes.push(nodeId); // Add the node to the handled nodes
-        console.warn(`Node with id ${node.name} has no relationships`);
-        continue; // Skip if there are no relationships to the node
-      }
-
-      const children = relationshipsToNode
-        .map((childId) => nodeMap.get(childId))
-        .filter((child) => child !== undefined);
-
-
-      if (children.length === 0) {
-        handeledNodes.push(nodeId); // Add the node to the handled nodes
-        console.warn(`Node with id ${node.name} has no children`);
-        continue; // Skip if there are no children
-      }
-      node.children = children; // Set the children of the node
-
-      nodeMap.set(nodeId, node); // Update the node in the map
-      handeledNodes.push(nodeId); // Add the node to the handled nodes
-      nodesToHandle.push(...children.map((child) => child.id)); // Add the children to the nodes to handle
+    if(!parent || !child) {
+      return;
     }
 
-
-    if (count >= 5000) {
-      console.warn("Infinite loop detected in buildHierarchy", count, nodesToHandle.length, handeledNodes.length);
-      return reject(new Error("Infinite loop detected in buildHierarchy"));
+    const parentLabelIndex = labelHierarchy.indexOf(parent.label);
+    const relDirection = parentLabelIndex > 0 ? relHeirarchy[parentLabelIndex-1] || '->' : '->'; // Get the relationship direction from the hierarchy
+    if(relDirection === '<-') {
+      // Swap parent and child if the relationship direction is reversed
+      console.warn("Swapping parent and child", parent.label, child.label);
+      const temp = parent;
+      parent = child;
+      child = temp;
     }
 
-    return resolve(nodeMap); // Resolve the promise when done
+    
+    if (!parent.children?.some((c) => c.id === child.id)) {
+      parent.children?.push(child) || (parent.children = [child]); // Add child to parent
+    }
   });
 
-  const nodeMap = await prom;
-  console.log("Finished");
-
+  
   // ------------------------------------------------------------
   // 1. Prune branches that contain no leaf when displayEmptyNodes
   //    is false.  We mutate `children` in-place so the `nodeMap`
@@ -256,6 +214,8 @@ export async function buildHierarchy(nodes: Entity[],
   }
 
   // Remove empty nodes if displayEmpty is false
+  // console.log(JSON.stringify(Array.from(nodeMap.values()), null, 2)); // Log the node map for debugging
+
 
   const rootLabel = !options.rootAtLabel || options.rootAtLabel === 'root' ? labelHierarchy[0] :  options.rootAtLabel; // Get the root label from the diagram options;
   
@@ -266,6 +226,8 @@ export async function buildHierarchy(nodes: Entity[],
       return isMatch && (displayEmptyNodes ? true : hasChildren)
     }
   );
+
+
 
 
   if (options.rootAtLabel === 'root') {
@@ -302,8 +264,7 @@ export function computeNestedBlockSize(
     titleModel: TitleModel | undefined = undefined, 
     blockModel: BoxModel | undefined = undefined): { width: number, height: number } {
 
-  if(count > 50) { // Prevent infinite loop
-    console.error("Infinite loop detected in computeNestedBlockSize", node.id, count);
+  if(count > 10000) { // Prevent infinite loop
     return { width: 0, height: 0 }; // Return zero size to avoid infinite loop
   }
 

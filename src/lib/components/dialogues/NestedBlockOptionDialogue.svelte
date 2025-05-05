@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
+    import { diagramOptions, emptyOptions, enteties, openDialogue, relationships } from "$lib/datastore.svelte";
 
     import type { RelationShipsOption } from "$lib/types";
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
-    import { db, type DiagramOptions } from "../db/dexie";
+    import { db, getAllLabels, labelRelationShips, labelsRelationShips, type DiagramOptions, type LabelRelationShips } from "../db/dexie";
     import Dexie from "dexie";
     
 
@@ -14,6 +14,8 @@
         diagramType: 'nestedblock',
     });
     let dialogueOnSide = $state(false);
+
+    let labelToLabelRelationShips: LabelRelationShips[] = $state([]);
 
     const dropped: string[] = $derived(nestedBlockOptions.labelHierarchy || []);
 
@@ -25,18 +27,23 @@
         event.dataTransfer?.setData('text/plain', label);
     }
 
-    function handleDrop(event: DragEvent) {
+    async function handleDrop(event: DragEvent) {
         event.preventDefault();
         const label = event.dataTransfer?.getData('text/plain');
         if (label) {
             dropped.push(label);
+            nestedBlockOptions.visibleLabels.push(label);
+            await tick();
+            await updateLabelOptions();
         }
-        displayOptionsChanged();
+        await displayOptionsChanged();
+    }
+
+    function getRelatedOptions(label: string) {
+        return labelToLabelRelationShips.filter((rel) => rel.fromLabel === label || rel.toLabel === label) || [];
     }
 
     async function displayOptionsChanged() {
-        console.log("displayOptionsChanged", nestedBlockOptions);
-
         await db.diagramOptions.put(Dexie.deepClone(nestedBlockOptions));
     }
 
@@ -44,12 +51,45 @@
         if (idx >= 0 && idx < nestedBlockOptions.labelHierarchy.length) {
             nestedBlockOptions.labelHierarchy.splice(idx, 1);
             dropped.splice(idx, 1);
+            await tick();
+            await updateLabelOptions();
+            await displayOptionsChanged();
         }
-    
-        displayOptionsChanged();
     }
 
     let labelOptions: string[] = $state([]);
+
+    async function updateLabelOptions() {
+        if(nestedBlockOptions.labelHierarchy.length === 0){
+            const allLabels = await getAllLabels();
+            labelOptions = allLabels
+                .map((d) => d as string)
+                .filter((label) => label && label.length > 0)
+                .filter((label) => nestedBlockOptions.labelHierarchy.indexOf(label) === -1)
+                .filter((label, index, self) => self.indexOf(label) === index)
+                .sort((a, b) => {
+                    if (a < b) return -1;
+                    if (a > b) return 1;
+                    return 0;
+                });
+            return;
+        }
+
+        labelToLabelRelationShips = await labelsRelationShips(nestedBlockOptions.labelHierarchy);
+
+        const lastLabelInHierarchy = nestedBlockOptions.labelHierarchy[nestedBlockOptions.labelHierarchy.length - 1];
+        const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
+
+        labelOptions = relatedOptions
+            .filter((label) => label && label.length > 0)
+            .filter((label) => nestedBlockOptions.labelHierarchy.indexOf(label) === -1)
+            .filter((label, index, self) => self.indexOf(label) === index)
+            .sort((a, b) => {
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+    }
 
     onMount(async () => {
         diagramOptions.subscribe(async (data) => {
@@ -63,13 +103,10 @@
             }
         });
 
-        enteties.subscribe((data) => {
-            labelOptions = data.map((d) => d.label).filter((label) => label && label.length > 0).filter((label, index, self) => self.indexOf(label) === index).sort((a, b) => {
-                if (a < b) return -1;
-                if (a > b) return 1;
-                return 0;
-            });
+        enteties.subscribe(async (data) => {
+            await updateLabelOptions();
         })
+
     });
 
 </script>
@@ -96,13 +133,14 @@
             </div>
         </header>
     <div class="grid" style="grid-template-columns: auto, auto; gap: 1rem;">
-        <article>
+        <article style="height: fit-content;">
             <header>
                 Heirarchy
             </header>
             <div class="grid">
-                <article>
+                <article class="heirarchy-options-article">
                     <header>Label options</header>
+                    <div class="heirarchy-options">
                     {#each labelOptions as lbl, idx}
                     <div
                         class="draggable"
@@ -111,10 +149,12 @@
                         role="button"
                         tabindex="0" >{lbl}</div>
                     {/each}
+                    </div>
 
                 </article>
-                <article>
+                <article class="heirarchy-options-article">
                     <header>Selected Heirarchy</header>
+                    <div class="heirarchy-options">
                     {#each nestedBlockOptions.labelHierarchy as labelName, idx}
                         <div
                             class="dropped"
@@ -130,30 +170,62 @@
                         ondragover={allowDrop}
                         ondrop={handleDrop}
                         role="button"
-                        tabindex="0" ><small><em>Drop next here</em></small></div>
+                        tabindex="0" ><small><em>Drop next here</em></small>
+                    </div>
+                    </div>
                 </article>
 
             </div>
-            <article>
-                <header>Root label</header>
-                <label>
-                    Select label to use as root:
-                    <select bind:value={nestedBlockOptions.rootAtLabel} onchange={() => displayOptionsChanged()}>
-                        <option value="root" selected>Root - (default)</option>
-                        {#each nestedBlockOptions.labelHierarchy as label, idx}
-                            <option value={label}>{label}</option>
-                        {/each}
-                    </select>
-                    <small><em>Use to splitting the hierarchy into multiple diagrams instead of using 1 root</em></small>
-                </label>
-                <label>
-                    Spacing:
-                    <input type="range" min="1" max="50" bind:value={nestedBlockOptions.boxModel!.spacing} onchange={() => displayOptionsChanged()} data-tooltip="Spacing"/>
-                    <em>Spacing {nestedBlockOptions.boxModel!.spacing} between the nodes</em>
-                </label>
-            </article>
+        <article>
+            <header>Relationship Modification</header>
+            {#each nestedBlockOptions.labelHierarchy as label, idx}
+                {#if idx > 0 && idx + 1 <= nestedBlockOptions.labelHierarchy.length}
+                <article>
+
+                    <div class="grid" style="grid-template-columns: 1fr auto 1fr; gap: 1rem;">
+                        {nestedBlockOptions.labelHierarchy[idx-1]} <select bind:value={nestedBlockOptions.hierarchyRelMod[idx-1]} onchange={() => displayOptionsChanged()}>
+                            {#each labelToLabelRelationShips.filter((rel) => rel.fromLabel === nestedBlockOptions.labelHierarchy[idx-1] && rel.toLabel === nestedBlockOptions.labelHierarchy[idx]) as rel, idx}
+                                <option value={rel.relationshipType}>
+                                    {#if rel.relationshipType === '->'}
+                                    &rarr;
+                                    {:else if rel.relationshipType === '<-'}
+                                    &larr;
+                                    {:else}
+                                    &harr;
+                                    {/if}
+                                </option>
+                            {/each}
+                        </select> {nestedBlockOptions.labelHierarchy[idx]}
+                    </div>
         </article>
+
+                {/if}
+
+            {/each}
+
+        </article>
+
+        </article>
+
 </div>
+<article>
+    <header>Root label</header>
+    <label>
+        Select label to use as root:
+        <select bind:value={nestedBlockOptions.rootAtLabel} onchange={() => displayOptionsChanged()}>
+            <option value="root" selected>Root - (default)</option>
+            {#each nestedBlockOptions.labelHierarchy as label, idx}
+                <option value={label}>{label}</option>
+            {/each}
+        </select>
+        <small><em>Use to splitting the hierarchy into multiple diagrams instead of using 1 root</em></small>
+    </label>
+    <label>
+        Spacing:
+        <input type="range" min="1" max="50" bind:value={nestedBlockOptions.boxModel!.spacing} onchange={() => displayOptionsChanged()} data-tooltip="Spacing"/>
+        <em>Spacing {nestedBlockOptions.boxModel!.spacing} between the nodes</em>
+    </label>
+</article>
 <article>
     <header>
         <span>Filtering</span>
@@ -201,6 +273,10 @@
 </dialog>
 
 {/if}
+
+<style>
+
+</style>
 
 
 

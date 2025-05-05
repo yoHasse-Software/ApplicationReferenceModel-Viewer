@@ -6,6 +6,7 @@
     import { getPicoColors } from '$lib/colorUtils';
     import { diagramOptions, emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
     import type { ConditionalFormatting, DiagramOptions } from './db/dexie';
+    import { sunBurstWrap } from '$lib/d3Utils';
 
 
     const { 
@@ -122,8 +123,6 @@
     }
 
 
-
-
     function setupPathEnter(rootNode: d3.HierarchyNode<BlockNode> , paths: d3.Selection<SVGPathElement, d3.HierarchyRectangularNode<BlockNode>, SVGGElement, unknown>){
       
       const pathsEnter = paths.enter()
@@ -158,11 +157,11 @@
 
     }
 
-      
-      /**
-       * Render (or re‑render) the diagram with `rootNode` as the new root.
-       */
+    /**
+     * Render (or re‑render) the diagram with `rootNode` as the new root.
+     */
     async function render(rootNode: d3.HierarchyNode<BlockNode>) {
+      console.log(JSON.stringify(rootNode.data, null, 2));
         if(rootNode.children?.length === 0) return;
 
         conditionalFormattingRuleMap.clear();
@@ -230,8 +229,12 @@
           return `rotate(${x}) translate(${y},0) rotate(${x < 90 ? 0 : 180})`;
         }
   
-        textsEnter.merge(texts as any)
-          .text((d: any) => d.data.name)
+        const textUpdate = textsEnter.merge(texts as any)
+          .text((d: any) => d.data.name);
+
+
+        textUpdate
+          .call(sunBurstWrap, 1.1)
           .attr('transform', labelTransform as any)
           .transition()
           .duration(300)

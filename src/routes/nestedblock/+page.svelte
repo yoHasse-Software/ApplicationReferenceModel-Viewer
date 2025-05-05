@@ -37,7 +37,7 @@
         const relationships = await db.relationships
             .where('to').anyOf(ids)
             .or('from').anyOf(ids)
-            .and((relationship) => relationship.type === '->') // Filter relationships based on the reversed property
+            // .and((relationship) => relationship.type === '->') // Filter relationships based on the reversed property
             .toArray(); // Filter relationships based on the IDs
             
         console.log('Data:', data.length); // Log the fetched data
