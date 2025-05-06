@@ -1,5 +1,5 @@
 import type { color } from "d3";
-import type { Entity } from "./components/db/dexie";
+import type { Entity } from "./components/db/dataRepository";
 
 export type DiagramTypes = 'none' | 'nestedblock' | 'graph' | 'sunburst';
 export type RuleOperator = 'equals' | 'metadataKeyEquals' | 'metadataKeyContains' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'between' | 'notEquals' | 'notContains' | 'notStartsWith' | 'notEndsWith';

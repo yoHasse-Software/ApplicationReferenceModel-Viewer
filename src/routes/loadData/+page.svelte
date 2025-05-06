@@ -1,7 +1,8 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import { addOrUpdateDataStore, openStore, type DataBaseOptions, type Entity } from "$lib/components/db/dexie";
+    import type { DataBaseOptions, Entity } from "$lib/components/db/dataRepository";
     import { getLocalStore } from "$lib/components/localStore.svelte";
+    import { createNewDataStore, database, selectDataStore } from "$lib/datastore.svelte";
     import type { GraphData, NodeRelation } from "$lib/types";
     import Dexie from "dexie";
     
@@ -28,7 +29,7 @@
         }
 
         // const nodeTree = generateNodeTree(groupedData);
-        await addOrUpdateDataStore(storeName, dataGraph);
+        await createNewDataStore(storeName, dataGraph);
     }
 
     const canAddLabel = () => {
@@ -188,7 +189,7 @@
 
         console.log("Graph data from DB:", graphData);
 
-        await addOrUpdateDataStore(storeName, graphData);
+        await createNewDataStore(storeName, graphData);
         
     }
 
@@ -250,7 +251,7 @@
             reader.onloadend = resolve;
         });
 
-        await addOrUpdateDataStore(storeName, jsonGraphData);
+        await createNewDataStore(storeName, jsonGraphData);
         
         console.log("Graph data from JSON:", jsonGraphData);
 
@@ -278,8 +279,6 @@
 
             var results = Papa.parse<Record<string, string>>(data, config);
 
-            // Parse sheet to JSON
-
             rawCsvRows = results.data;
             labels = Object.keys(rawCsvRows[0] || {});
             showLabelSelector = true;
@@ -295,11 +294,8 @@
     }
 
     async function openDbStore(store: string) {
-        storeName = store;
-
-        await openStore(store);
-        await tick();
-        location.reload(); // Reload the page to apply changes
+        currentStore = store;
+        await selectDataStore(store);
     }
 
 

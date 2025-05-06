@@ -1,8 +1,10 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { BlockNode, BoxModel, DiagramTypes, DisplayOptions, GraphData, RuleOperator, TitleModel} from "./types";
 import { get, writable } from "svelte/store";
-import { db, type ConditionalFormatting, type DiagramOptions, type Entity } from "./components/db/dexie";
-import { liveQuery } from "dexie";
+import { AppDexie } from "./components/db/dexie";
+import Dexie, { liveQuery } from "dexie";
+import type { ConditionalFormatting, DataBaseOptions, DataRepository, DiagramOptions, Entity, RelationShip } from "./components/db/dataRepository";
+import { localStore } from "./components/localStore.svelte";
 
 
 // export const N1WIDTH = 1200;
@@ -42,10 +44,6 @@ export const emptyOptions: DiagramOptions = {
   diagramType: "none"
 }
 
-
-
-
-
 export const RuleOperatoruleOptions: RuleOperator[] = [
     'equals',
     'contains',
@@ -75,34 +73,76 @@ export const openDialogue = new SvelteMap<DialogueOption, boolean>([
 ]);
 
 
-export const enteties = liveQuery(
-    () => db.enteties.toArray() // Get all entities
-)
 
 
-export const relationships = liveQuery(
-    () => db.relationships.toArray() // Get all relationships
-)
+export const defaultDbName = 'default-nodata';
+const dbVersion = 1;
 
-export const conditionalFormatting = liveQuery(
-    () => db.conditionalFormatting.toArray() // Get all conditional formatting rules
-)
+let dbOptions = localStore<DataBaseOptions>('database-options', {
+  selectedDb: defaultDbName,
+  dbVersion: dbVersion
+});
 
-export const diagramOptions = liveQuery(
-    () => db.diagramOptions.toArray() // Get all diagram options
-)
+class DataRepo extends AppDexie{}; // This is the current database type, can be changed to any other database type that extends AppDexie
 
+export let database = new DataRepo(dbOptions.value.selectedDb, dbOptions.value.dbVersion);
+export const availableDatabases = new SvelteMap<string, DataRepository>();
+
+// await PopulateDataStores();
+
+export async function populateDataStores(){
+  console.log("Populating data stores...");
+  const availableStores = await database.getAvailableStores();
+  for (const store of availableStores) {
+    if (store !== dbOptions.value.selectedDb) {
+      const db = new DataRepo(store, dbOptions.value.dbVersion);
+      await db.initialize();
+      availableDatabases.set(store, db);
+    }
+  }
+}
+
+export const enteties = writable<Entity[]>([]);
+export const relationships = writable<RelationShip[]>([]);
+export const conditionalFormatting = writable<ConditionalFormatting[]>([]);
+export const diagramOptions = writable<DiagramOptions[]>([]);
+
+export async function createNewDataStore(dbName: string, graphData: GraphData) {
+  dbOptions.value.selectedDb = dbName;
+  dbOptions.value.dbVersion = dbVersion;
+  database = new DataRepo(dbName, dbOptions.value.dbVersion);
+  await database.initialize();
+  await database.initData(graphData);
+  availableDatabases.set(dbName, database);
+  enteties.set(await database.getEnteties());
+  relationships.set(await database.getRelationships());
+  conditionalFormatting.set(await database.getConditionalFormatting());
+  diagramOptions.set(await database.getDiagramOptions());
+  console.log("Data store created and populated with data.");
+}
+
+export async function selectDataStore(dbName: string) {
+  dbOptions.value.selectedDb = dbName;
+  if (!availableDatabases.has(dbName)) {
+    const db = new DataRepo(dbName, dbOptions.value.dbVersion);
+    await db.initialize();
+    availableDatabases.set(dbName, db);
+  }
+
+  database = availableDatabases.get(dbName) as DataRepo;
+
+  enteties.set(await database.getEnteties());
+  relationships.set(await database.getRelationships());
+  conditionalFormatting.set(await database.getConditionalFormatting());
+  diagramOptions.set(await database.getDiagramOptions());
+}
 
 
 let inmemoryRules: ConditionalFormatting[] = $state([]);
 
-export function initialize(){
-  conditionalFormatting.subscribe((rules) => {
-    inmemoryRules = rules;
-  });
-}
-
-
+conditionalFormatting.subscribe((rules) => {
+  inmemoryRules = rules;
+});
 
 
 

@@ -1,12 +1,12 @@
 
 <script lang="ts">
-    import {  diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
+    import {  database, diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
     import type { RelationShipsOption } from "$lib/types";
     import { lab } from "d3";
     import { onMount, tick } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
-    import { db, getAllLabels, labelsRelationShips, type DiagramOptions, type LabelRelationShips } from "../db/dexie";
     import Dexie from "dexie";
+    import type { DiagramOptions, LabelRelationShips } from "../db/dataRepository";
 
 
     let sunBurstOptions: DiagramOptions = $state({
@@ -56,7 +56,7 @@
 
     async function updateLabelOptions() {
         if(sunBurstOptions.labelHierarchy.length === 0){
-            const allLabels = await getAllLabels();
+            const allLabels = await database.getAllLabels();
             labelOptions = allLabels
                 .map((d) => d as string)
                 .filter((label) => label && label.length > 0)
@@ -70,7 +70,7 @@
             return;
         }
 
-        labelToLabelRelationShips = await labelsRelationShips(sunBurstOptions.labelHierarchy);
+        labelToLabelRelationShips = await database.getLabelRelations(sunBurstOptions.labelHierarchy);
 
         const lastLabelInHierarchy = sunBurstOptions.labelHierarchy[sunBurstOptions.labelHierarchy.length - 1];
         const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
@@ -89,7 +89,7 @@
 
 
     async function displayOptionsChanged() {
-        await db.diagramOptions.put(Dexie.deepClone(sunBurstOptions));
+        await database.updateDiagramOptions(sunBurstOptions);
     }
 
      onMount(() => {
@@ -99,7 +99,7 @@
                 sunBurstOptions = currentOptions;
             }
             else {
-                await db.diagramOptions.add(Dexie.deepClone(sunBurstOptions));
+                await database.addDiagramOptions(sunBurstOptions);
             }
         });
 

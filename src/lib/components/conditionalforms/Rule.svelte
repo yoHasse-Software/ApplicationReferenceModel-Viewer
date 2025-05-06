@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { enteties, RuleOperatoruleOptions } from "$lib/datastore.svelte";
+    import { database, enteties, RuleOperatoruleOptions } from "$lib/datastore.svelte";
     import { onMount } from "svelte";
-    import { db, type ConditionalFormatting } from "../db/dexie";
+    import type { ConditionalFormatting } from "../db/dataRepository";
 
 
 
@@ -35,7 +35,7 @@
             rule.value = "";
         }
 
-        const data = await db.enteties.toArray();
+        const data = await database.getEnteties();
 
         const metaKeyOptionsRes = data.filter((node) => node.label === rule.label)
             .flatMap((node) => {
@@ -65,7 +65,7 @@
             rule.value = "";
         }
         // Order by value
-        const data = await db.enteties.toArray();
+        const data = await database.getEnteties();
         const nodeDataValueMap = data.filter((node) => {
             return node.label === rule.label && rule.metadataKey && ((rule.metadataKey in node) || node.metadata[rule.metadataKey]);
         }).map((node) => {

@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { diagramOptions, emptyOptions, enteties, openDialogue, relationships } from "$lib/datastore.svelte";
+    import { database, diagramOptions, emptyOptions, enteties, openDialogue, relationships } from "$lib/datastore.svelte";
 
     import type { RelationShipsOption } from "$lib/types";
     import { onMount, tick } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
-    import { db, getAllLabels, labelRelationShips, labelsRelationShips, type DiagramOptions, type LabelRelationShips } from "../db/dexie";
     import Dexie from "dexie";
+    import type { DiagramOptions, LabelRelationShips } from "../db/dataRepository";
     
 
     let nestedBlockOptions: DiagramOptions = $state({
@@ -44,7 +44,7 @@
     }
 
     async function displayOptionsChanged() {
-        await db.diagramOptions.put(Dexie.deepClone(nestedBlockOptions));
+        await database.updateDiagramOptions(nestedBlockOptions);
     }
 
     async function handledelete(idx: number) {
@@ -61,7 +61,7 @@
 
     async function updateLabelOptions() {
         if(nestedBlockOptions.labelHierarchy.length === 0){
-            const allLabels = await getAllLabels();
+            const allLabels = await database.getAllLabels();
             labelOptions = allLabels
                 .map((d) => d as string)
                 .filter((label) => label && label.length > 0)
@@ -75,7 +75,7 @@
             return;
         }
 
-        labelToLabelRelationShips = await labelsRelationShips(nestedBlockOptions.labelHierarchy);
+        labelToLabelRelationShips = await database.getLabelRelations(nestedBlockOptions.labelHierarchy);
 
         const lastLabelInHierarchy = nestedBlockOptions.labelHierarchy[nestedBlockOptions.labelHierarchy.length - 1];
         const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
@@ -99,7 +99,7 @@
             }
             else {
                 console.log("No options found, creating default options", nestedBlockOptions);
-                await db.diagramOptions.add(Dexie.deepClone(nestedBlockOptions));
+                await database.addDiagramOptions(nestedBlockOptions);
             }
         });
 

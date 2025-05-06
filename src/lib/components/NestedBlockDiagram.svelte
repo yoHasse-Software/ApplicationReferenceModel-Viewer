@@ -7,7 +7,8 @@
     import { wrap } from '$lib/d3Utils';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import { db, type DiagramOptions } from './db/dexie';
+    import type { DiagramOptions } from './db/dataRepository';
+    
     const { 
         root,
         updateTooltipText,
@@ -146,6 +147,7 @@
         
 
         conditionalFormatting.subscribe((data) => {
+          console.log("Conditional formatting data: "); // Log the conditional formatting data for debugging
           if (data && initialized) {
             console.log("Conditional formatting data: ", data); // Log the conditional formatting data for debugging
             drawBlockDiagram(root, d3.select(group));

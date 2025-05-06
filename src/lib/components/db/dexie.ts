@@ -1,76 +1,8 @@
 import Dexie, { type EntityTable, type BulkError, type Collection } from "dexie";
-import type { BoxModel, DiagramTypes, GraphData, RuleOperator, TitleModel } from "$lib/types";
-import { localStore } from "../localStore.svelte";
-
-export const defaultDbName = 'default-nodata';
-const dbVersion = 1;
+import type { GraphData} from "$lib/types";
+import type { ConditionalFormatting, DataRepository, DiagramOptions, Entity, LabelRelationShips, RelationShip } from "./dataRepository";
 
 
-export interface Entity {
-    id: string;
-    name: string;
-    label: string;
-    metadata: {
-        [key: string]: string | number | boolean;
-    };
-}
-export interface RelationShip {
-    id: string;
-    from: string;
-    label: string;
-    type: "<->" | "->" | "<-";
-    to: string;
-    metadata: {
-        [key: string]: string | number | boolean;
-    };
-}
-
-export interface ConditionalFormatting { 
-    id: string;
-    name: string;
-    label: string; 
-    value: string; 
-    metadataKey: string;
-    operator: RuleOperator;
-    styling: {
-        backgroundColor: {
-            isSet: boolean;
-            color?: string;
-        };
-        color: {
-            isSet: boolean;
-            color?: string;
-        };
-        borderColor: {
-            isSet: boolean;
-            color?: string;
-        };
-        fontWeight?: 'normal' | 'bold';
-        fontStyle?: 'normal' | 'italic';
-        textDecoration?: 'none' | 'underline' | 'line-through';
-        content?: string;
-    }
-}
-
-export interface DiagramOptions {
-    diagramType: DiagramTypes;
-    labelHierarchy: string[];
-    hierarchyRelMod: string[];
-    visibleLabels: string[];
-    displayEmpty: boolean;
-    rootAtLabel?: string;
-    boxModel?: BoxModel;
-    titleModel?: TitleModel;
-    rootColumns?: number;
-    diameter?: number;
-    maxDepth?: number;
-    columnsPerLabel: {
-        [key: string]: number;
-    };
-    labelColors: {
-        [key: string]: string;
-    };
-}
 
 Dexie.debug = true;  
 
@@ -89,103 +21,29 @@ type AppDatabase = Dexie & {
   diagramOptions: EntityTable<DiagramOptions>;
 }
 
-export type DataBaseOptions = {
-  selectedDb: string;
-  dbVersion: number;
-}
+export class AppDexie implements DataRepository {
+  private db: AppDatabase;
+  private storeName: string;
 
-let dbOptions = localStore<DataBaseOptions>('database-options', {
-  selectedDb: defaultDbName,
-  dbVersion: dbVersion
-});
-
-let _db: AppDatabase = new Dexie(dbOptions.value.selectedDb) as AppDatabase;
-
-export const db = _db;
-
-
-_db.version(dbVersion).stores({
-  enteties: entetyKeyString,
-  relationships: relationshipsKeyString,
-  conditionalFormatting: conditionalFormattingKeyString,
-  diagramOptions: diagramOptionsKeyString
-});
-
-
-
-export async function openStore(name: string) {
-  const availableStores = await Dexie.getDatabaseNames();
-  if (!availableStores.includes(name)) {
-    console.error(`Database ${name} does not exist`);
-    return null;
+  constructor(selectedDb: string, dbVersion: number = 1) {
+    this.storeName = selectedDb.replace(/[^a-zA-Z0-9]/g, "_"); // Remove special characters from the store name
+    this.db = new Dexie(selectedDb) as AppDatabase;
+    this.db.version(dbVersion).stores({
+      enteties: entetyKeyString,
+      relationships: relationshipsKeyString,
+      conditionalFormatting: conditionalFormattingKeyString,
+      diagramOptions: diagramOptionsKeyString
+    });
   }
 
-  console.log(`Opening database ${name}`);
-
-  dbOptions.value.selectedDb = name;
-
-  console.log(`Database options updated to`, dbOptions.value);
-
-  _db = new Dexie(name) as Dexie & {
-    enteties: EntityTable<
-        Entity, 'id'>;
-    relationships: EntityTable<RelationShip, 'id'>;
-    conditionalFormatting: EntityTable<
-        ConditionalFormatting, 'id'>;
-    diagramOptions: EntityTable<DiagramOptions>;
+  async initialize(){
+    await this.db.open().catch((error) => {
+      console.error("Failed to open database:", error);
+    });
   }
 
-  _db.version(dbOptions.value.dbVersion).stores({
-    enteties: entetyKeyString,
-    relationships: relationshipsKeyString,
-    conditionalFormatting: conditionalFormattingKeyString,
-    diagramOptions: diagramOptionsKeyString
-  });
-
-  return await _db.open();
-}
-
-export async function createStore(name: string) {
-  _db = new Dexie(name) as Dexie & {
-    enteties: EntityTable<
-        Entity, 'id'>;
-    relationships: EntityTable<RelationShip, 'id'>;
-    conditionalFormatting: EntityTable<
-        ConditionalFormatting, 'id'>;
-    diagramOptions: EntityTable<DiagramOptions>;
-  }
-
-  _db.version(dbVersion).stores({
-    enteties: entetyKeyString,
-    relationships: relationshipsKeyString,
-    conditionalFormatting: conditionalFormattingKeyString,
-    diagramOptions: diagramOptionsKeyString
-  });
-
-  return await _db.open();
-}
-
-
-
-
-export async function addOrUpdateDataStore(storeName: string, graphData: GraphData) {
-
-  storeName = storeName.replace(/[^a-zA-Z0-9]/g, "_"); // Remove special characters from the store name
-  const availableStores = await Dexie.getDatabaseNames();
-  if (!availableStores.includes(storeName)) {
-    await createStore(storeName);
-  }
-
-  if(!_db) {
-    console.error("Database is not initialized. Please create or open a database first.");
-    return;
-  }
-
-  if(_db.name !== storeName) {
-    await openStore(storeName); // Open the new database connection
-  }
-
-    await _db.transaction('rw', _db.enteties, _db.relationships, async (tx) => {
+  async initData(graphData: GraphData) {
+    await this.db.transaction('rw', this.db.enteties, this.db.relationships, async (tx) => {
       try {
         console.log("Adding data to the database...");
         const entityKeys = await tx.enteties.bulkPut(
@@ -210,67 +68,47 @@ export async function addOrUpdateDataStore(storeName: string, graphData: GraphDa
         throw e;
       }
     });
-}
-
-export type LabelRelationShips = {
-    fromLabel: string;
-    toLabel: string;
-    relationshipType: "<->" | "->" | "<-";
-    relationshipLabel: string;
-}
-
-
-export async function getLabelRelationships(label: string) {
-  if (!_db) {
-    console.error("Database is not initialized. Please create or open a database first.");
-    return;
   }
 
-    const relationships = await _db.relationships
+  async getAvailableStores(): Promise<string[]> {
+    const availableStores = await Dexie.getDatabaseNames();
+    return availableStores.filter(store => store !== this.storeName);
+  }
+
+
+  async getEnteties(): Promise<Entity[]> {
+    return this.db.enteties.toArray();
+  }
+  async getAllLabels(): Promise<string[]> {
+    return this.db.enteties.orderBy('label').uniqueKeys() as Promise<string[]>;
+  }
+
+  async getLabelRelationships(label: string): Promise<RelationShip[]> {
+    return this.db.relationships
         .where('from')
         .equals(label)
         .or('to')
         .equals(label)
         .toArray();
-    return relationships;
-}
+  }
 
-export async function getAllLabels() {
-    if (!_db) {
-        console.error("Database is not initialized. Please create or open a database first.");
-        return;
-    }
-    const labels = await _db.enteties
-        .orderBy('label')
-        .uniqueKeys();
-    return labels;
-}
-
-export async function labelRelationShips(labels: string) {
-    return await labelsRelationShips([labels]);
-}
-
-
-export async function labelsRelationShips(
-    label: string[],
-  ): Promise<LabelRelationShips[]> {
-
-    if (!_db) {
+  async getLabelRelations(labels: string[]): Promise<LabelRelationShips[]> {
+    if (!this.db) {
       console.error("Database is not initialized. Please create or open a database first.");
       return [];
     }
   
-    return _db.transaction('r', _db.enteties, _db.relationships, async () => {
+    return this.db.transaction('r', this.db.enteties, this.db.relationships, async () => {
   
       /* 1️⃣  Load the entities themselves */
-      const entities = await _db!.enteties.where('label').anyOf(label).toArray();                  // Entity[]
+      const entities = await this.db!.enteties.where('label').anyOf(labels).toArray();                  // Entity[]
   
       if (entities.length === 0) return [];
   
       /* 2️⃣  For each entity, kick off a query for *all* edges that
               touch its id, regardless of direction. */
       const edgePromises = entities.map(e =>
-        _db!.relationships
+        this.db!.relationships
           .where('from').equals(e.id)
           .or('to').equals(e.id)
           .toArray()                                                 // Promise<RelationShip[]>
@@ -291,7 +129,7 @@ export async function labelsRelationShips(
   
       /* 5️⃣  For each entity, kick off a bulkGet for its neighbours */
       const neighbourPromises = neighbourIdMatrix.map(ids =>
-        _db!.enteties.bulkGet(ids)                                     // Promise<(Entity|undefined)[]>
+        this.db!.enteties.bulkGet(ids)                                     // Promise<(Entity|undefined)[]>
       );
   
       const neighbourResults = await Promise.all(neighbourPromises); // (Entity|undefined)[][]
@@ -331,4 +169,60 @@ export async function labelsRelationShips(
       });  
     });
   }
-  
+
+  async getRelationships(): Promise<RelationShip[]> {
+    return this.db.relationships.toArray();
+  }
+  async getConditionalFormatting(): Promise<ConditionalFormatting[]> {
+    return this.db.conditionalFormatting.toArray();
+  }
+  async getDiagramOptions(): Promise<DiagramOptions[]> {
+    return this.db.diagramOptions.toArray();
+  }
+
+  async getEntitiesByLabel(label: string): Promise<Entity[]> {
+    return this.db.enteties.where('label').equals(label).toArray();
+  }
+
+  async getConditionalFormattingByLabel(label: string): Promise<ConditionalFormatting[]> {
+    return this.db.conditionalFormatting.where('label').equals(label).toArray();
+  }
+
+  async addConditionalFormatting(conditionalFormatting: ConditionalFormatting): Promise<void> {
+    await this.db.conditionalFormatting.add(conditionalFormatting).catch((error) => {
+      console.error("Failed to add conditional formatting:", error);
+    });
+  }
+
+  async updateConditionalFormatting(conditionalFormatting: ConditionalFormatting): Promise<void> {
+    const deepCloneConditionalFormatting = Dexie.deepClone(conditionalFormatting);
+    await this.db.conditionalFormatting.update(deepCloneConditionalFormatting.id, deepCloneConditionalFormatting).catch((error) => {
+      console.error("Failed to update conditional formatting:", error);
+    });
+  }
+
+  async deleteConditionalFormatting(id: string): Promise<void> {
+    await this.db.conditionalFormatting.delete(id).catch((error) => {
+      console.error("Failed to delete conditional formatting:", error);
+    });
+  }
+
+  async addDiagramOptions(diagramOptions: DiagramOptions): Promise<void> {
+    const deepCloneDiagramOptions = Dexie.deepClone(diagramOptions);
+    await this.db.diagramOptions.add(deepCloneDiagramOptions).catch((error) => {
+      console.error("Failed to add diagram options:", error);
+    });
+  }
+
+  async updateDiagramOptions(diagramOptions: DiagramOptions): Promise<void> {
+    const deepCloneDiagramOptions = Dexie.deepClone(diagramOptions);
+    await this.db.diagramOptions.put(deepCloneDiagramOptions).catch((error) => {
+      console.error("Failed to update diagram options:", error);
+    });
+  }
+
+}
+
+
+
+

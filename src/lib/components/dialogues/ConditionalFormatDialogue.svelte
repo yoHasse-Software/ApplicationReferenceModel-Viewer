@@ -1,13 +1,12 @@
 
 <script lang="ts">
-    import { conditionalFormatting, openDialogue} from "$lib/datastore.svelte";
+    import { conditionalFormatting, database, openDialogue} from "$lib/datastore.svelte";
     import { onMount } from "svelte";
     import Rule from "../conditionalforms/Rule.svelte";
     import Base from "../conditionalforms/Base.svelte";
     import NodeStyling from "../conditionalforms/NodeStyling.svelte";
     import FontStyling from "../conditionalforms/FontStyling.svelte";
-    import { db, type ConditionalFormatting } from "../db/dexie";
-    import Dexie from "dexie";
+    import type { ConditionalFormatting } from "../db/dataRepository";
 
     
     let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
@@ -48,13 +47,13 @@
             detailsRefs[index].open = false;
         }
 
-        const rules = formattingRules.find((rule) => rule.id === id);
-        if (!rules) {
+        const rule = formattingRules.find((rule) => rule.id === id);
+        if (!rule) {
             console.error("Rule not found");
             return;
         }
 
-        await db.conditionalFormatting.put(Dexie.deepClone(rules));
+        await database.updateConditionalFormatting(rule);
     }
 
     async function removeConditionalFormattingRule(index: number, id: string) {
@@ -65,8 +64,7 @@
         }
 
         // Remove the rule from the database
-        await db.conditionalFormatting.delete(id);
-        
+        await database.deleteConditionalFormatting(id);
     }
 
     let formattingRules: ConditionalFormatting[] = $state([]);

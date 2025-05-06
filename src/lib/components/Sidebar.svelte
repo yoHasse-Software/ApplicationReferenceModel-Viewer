@@ -5,7 +5,6 @@
     import { onMount } from "svelte";
     import { page } from '$app/state';
     import { goto } from "$app/navigation";
-    import { db } from "./db/dexie";
 
 
     let isSidebarVisible = $state(false);
@@ -19,10 +18,6 @@
 
 
     function onClearData(){
-        db.enteties.clear();
-        db.relationships.clear();
-        db.diagramOptions.clear();
-        db.conditionalFormatting.clear();
         location.reload();
     }
 

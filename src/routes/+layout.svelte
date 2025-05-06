@@ -1,12 +1,11 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
-    import { defaultDbName, db } from '$lib/components/db/dexie';
     import ConditionalFormatDialogue from '$lib/components/dialogues/ConditionalFormatDialogue.svelte';
     import NestedBlockOptionDialogue from '$lib/components/dialogues/NestedBlockOptionDialogue.svelte';
     import SunBurstOptionsDialogue from '$lib/components/dialogues/SunBurstOptionsDialogue.svelte';
     import Sidebar from '$lib/components/Sidebar.svelte';
-    import { enteties, initialize } from '$lib/datastore.svelte';
+    import { enteties, populateDataStores } from '$lib/datastore.svelte';
     import Dexie from 'dexie';
     import { onMount } from 'svelte';
 
@@ -19,12 +18,10 @@
     onMount(async () => {
         // Initialize the conditional formatting rules
 
-        if(db.name === defaultDbName && page.url.pathname !== '/loadData') {
-          goto('/loadData', { replaceState: true });
-        }
+        await populateDataStores();
 
-        
         enteties.subscribe((value) => {
+            console.log("Entities length: ", value.length);
             entityLength = value.length;
         });
         
