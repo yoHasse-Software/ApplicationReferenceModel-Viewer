@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { BlockNode, BoxModel, ColorPalette, DiagramTypes, FontSettings, TitleModel } from "./types";
-import type { DiagramOptions, Entity, RelationShip } from "./components/db/dexie";
-import { defaultBoxModel, defaultTitleModel, relationships } from "./datastore.svelte";
+import { defaultBoxModel, defaultTitleModel } from "./datastore.svelte";
+import type { DiagramOptions, Entity, RelationShip } from "./components/db/dataRepository";
 
 
 export const defaultColorPalette: ColorPalette = {

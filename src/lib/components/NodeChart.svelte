@@ -5,15 +5,26 @@
     import { SimulationLink, SimulationNode } from "$lib/models/SimulationNode";
     import * as d3 from 'd3';
     import { onMount } from "svelte";
-    import { db } from "./db/dexie";
+    import { idb } from "./db/dexie";
+    import type { DiagramOptions } from "./db/dataRepository";
+
+
+    const {
+        currentOptions,
+        perspectiveId,
+        diagramid,
+    }:{
+        currentOptions: DiagramOptions,
+        perspectiveId: number,
+        diagramid: number,
+    } = $props();
 
     let group: SVGGElement;
 
     async function createSimulationNodes(){
-        const data = (await db.enteties.toArray()).map(d => ({...d}));
-        const relationships = (await db.relationships.toArray()).map(d => ({...d}));
+        const data = (await idb.enteties.toArray()).map(d => ({...d}));
+        const relationships = (await idb.relationships.toArray()).map(d => ({...d}));
 
-        console.log(relationships);
 
         // Specify the color scale.
         const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -21,12 +32,15 @@
         // The force simulation mutates links and nodes, so create a copy
         // so that re-evaluating this cell produces the same result.
 
+        let missingRelationships:string[] = [];
+
         const links = relationships.map(d => {
 
             const from = data.find(node => node.id === d.from);
             const to = data.find(node => node.id === d.to);
             if (!from || !to) {
-                throw new Error(`Node not found for id: ${d.from} or ${d.to}`);
+                missingRelationships.push(`Missing relationship from ${d.from} to ${d.to}`);
+                return null;
             }
 
             const fromNode = new SimulationNode(from.id, from.name, from.label, from.metadata);
@@ -34,9 +48,12 @@
 
             return new SimulationLink(fromNode, toNode)
 
-        });
+        }).filter(d => d !== null) as SimulationLink[];
         const nodes = data.map(d => new SimulationNode(d.id, d.name, d.label, d.metadata));
 
+        if (missingRelationships.length > 0) {
+            console.warn("Missing relationships:", missingRelationships);
+        }
 
         console.log(links);
 
@@ -122,6 +139,10 @@
 
       // Specify the dimensions of the chart.
     onMount(async () => {
+        if(currentOptions.labelHierarchy.length === 0) {
+            console.error("Label hierarchy is empty. Cannot create simulation nodes.");
+            return;
+        }
         await createSimulationNodes();
     });
 

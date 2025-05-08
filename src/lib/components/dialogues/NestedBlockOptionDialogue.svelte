@@ -1,18 +1,18 @@
 <script lang="ts">
-    import { database, diagramOptions, emptyOptions, enteties, openDialogue, relationships } from "$lib/datastore.svelte";
-
-    import type { RelationShipsOption } from "$lib/types";
+    import { closeDialogueOption, defaultPerspective, emptyOptions, isDialogueOpen } from "$lib/datastore.svelte";
     import { onMount, tick } from "svelte";
-    import { SvelteMap } from "svelte/reactivity";
+    import type { DiagramOptions, LabelRelationShips, Perspective } from "../db/dataRepository";
+    import { getLabelRelations, idb } from "../db/dexie";
     import Dexie from "dexie";
-    import type { DiagramOptions, LabelRelationShips } from "../db/dataRepository";
     
 
-    let nestedBlockOptions: DiagramOptions = $state({
-        ...emptyOptions,
-        id: 2,
-        diagramType: 'nestedblock',
-    });
+    const { perspectiveId, optionsId } : { perspectiveId: number, optionsId: number} = $props();
+
+    let currentPerspective: Perspective = $state(defaultPerspective);
+
+    
+
+    let nestedBlockOptions: DiagramOptions = $state({ ...emptyOptions, perspectiveId, diagramType: 'nestedblock' });
     let dialogueOnSide = $state(false);
 
     let labelToLabelRelationShips: LabelRelationShips[] = $state([]);
@@ -44,7 +44,8 @@
     }
 
     async function displayOptionsChanged() {
-        await database.updateDiagramOptions(nestedBlockOptions);
+
+        await idb.diagramOptions.put(Dexie.deepClone(nestedBlockOptions));
     }
 
     async function handledelete(idx: number) {
@@ -61,7 +62,8 @@
 
     async function updateLabelOptions() {
         if(nestedBlockOptions.labelHierarchy.length === 0){
-            const allLabels = await database.getAllLabels();
+
+            const allLabels = currentPerspective.selectedLabels || [];
             labelOptions = allLabels
                 .map((d) => d as string)
                 .filter((label) => label && label.length > 0)
@@ -75,7 +77,7 @@
             return;
         }
 
-        labelToLabelRelationShips = await database.getLabelRelations(nestedBlockOptions.labelHierarchy);
+        labelToLabelRelationShips = await getLabelRelations(nestedBlockOptions.labelHierarchy);
 
         const lastLabelInHierarchy = nestedBlockOptions.labelHierarchy[nestedBlockOptions.labelHierarchy.length - 1];
         const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
@@ -92,26 +94,23 @@
     }
 
     onMount(async () => {
-        diagramOptions.subscribe(async (data) => {
-            const currentOptions = data.find((option) => option.diagramType === 'nestedblock');
-            if (currentOptions) {
-                nestedBlockOptions = currentOptions;
-            }
-            else {
-                console.log("No options found, creating default options", nestedBlockOptions);
-                await database.addDiagramOptions(nestedBlockOptions);
-            }
-        });
 
-        enteties.subscribe(async (data) => {
-            await updateLabelOptions();
-        })
+        nestedBlockOptions = await idb.diagramOptions.get(optionsId) || {
+            ...emptyOptions,
+            perspectiveId,
+            diagramType: 'nestedblock'
+        };
+
+        currentPerspective = await idb.perspectives.get(perspectiveId) || {
+            ...defaultPerspective,
+            id: perspectiveId,
+        }
+
+        await updateLabelOptions();
 
     });
 
 </script>
-
-{#if nestedBlockOptions && openDialogue.get('nestedblockoptions')}
 
 <dialog open class:side-dialogue={dialogueOnSide}>
     <article>
@@ -126,13 +125,13 @@
                             <span class="ico ico-arrow-bar-left"></span>
                         {/if}
                     </button>
-                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('nestedblockoptions', false)} aria-label="add label">
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => closeDialogueOption('nestedblockoptions')} aria-label="add label">
                         <span class="ico ico-x"></span>
                     </button>
                 </div>
             </div>
         </header>
-    <div class="grid" style="grid-template-columns: auto, auto; gap: 1rem;">
+    
         <article style="height: fit-content;">
             <header>
                 Heirarchy
@@ -149,33 +148,37 @@
                         role="button"
                         tabindex="0" >{lbl}</div>
                     {/each}
+                    
                     </div>
 
                 </article>
                 <article class="heirarchy-options-article">
                     <header>Selected Heirarchy</header>
                     <div class="heirarchy-options">
-                    {#each nestedBlockOptions.labelHierarchy as labelName, idx}
                         <div
-                            class="dropped"
+                            class="droppable"
+                            ondragover={allowDrop}
+                            ondrop={handleDrop}
                             role="button"
-                            tabindex="0" >{labelName}
-                            <button type="button" class="outline" onclick={() => handledelete(idx)} aria-label="remove label">
-                               <span class="ico ico-trash"></span>
-                            </button>
+                            tabindex="0" ><small><em>Drop next here</em></small>
                         </div>
-                    {/each}
-                    <div
-                        class="droppable"
-                        ondragover={allowDrop}
-                        ondrop={handleDrop}
-                        role="button"
-                        tabindex="0" ><small><em>Drop next here</em></small>
-                    </div>
+                        {#each nestedBlockOptions.labelHierarchy as labelName, idx}
+                            <div
+                                class="dropped"
+                                role="button"
+                                tabindex="0" >{labelName}
+                                <button type="button" class="outline" onclick={() => handledelete(idx)} aria-label="remove label">
+                                <span class="ico ico-trash"></span>
+                                </button>
+                            </div>
+                        {/each}
+
                     </div>
                 </article>
 
             </div>
+        </article>
+
         <article>
             <header>Relationship Modification</header>
             {#each nestedBlockOptions.labelHierarchy as label, idx}
@@ -197,7 +200,7 @@
                             {/each}
                         </select> {nestedBlockOptions.labelHierarchy[idx]}
                     </div>
-        </article>
+            </article>
 
                 {/if}
 
@@ -205,9 +208,7 @@
 
         </article>
 
-        </article>
 
-</div>
 <article>
     <header>Root label</header>
     <label>
@@ -271,8 +272,6 @@
 
 
 </dialog>
-
-{/if}
 
 <style>
 

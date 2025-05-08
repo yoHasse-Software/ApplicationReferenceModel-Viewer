@@ -106,7 +106,7 @@
 }
 
 .heirarchy-options-article {
-  max-height: 20rem;
+  max-height: 30rem;
 }
 .heirarchy-options {
   max-height: 15rem;
@@ -127,6 +127,25 @@
   left: 0;
   right: unset;
   bottom: unset;
+}
+
+.article-button {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  margin: 1rem;
+  padding: unset;
+  border: unset;
+}
+
+.article-button>article {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+section {
+  background-color: var(--pico-background-color);
+  color: var(--pico-color);
 }
 
 
@@ -155,6 +174,10 @@
 
 .ico-arrow-narrow-up {
   --svg: url('../icons/tabler/arrow-narrow-up.svg');
+}
+
+.ico-arrow-narrow-left {
+  --svg: url('../icons/tabler/arrow-narrow-left.svg');
 }
 
 .ico-arrows-down-up {
@@ -200,4 +223,16 @@
 
 .ico-database {
   --svg: url('../icons/tabler/database.svg');
+}
+
+.ico-moon {
+  --svg: url('../icons/tabler/moon.svg');
+}
+
+.ico-sun {
+  --svg: url('../icons/tabler/sun.svg');
+}
+
+.ico-eye-search {
+  --svg: url('../icons/tabler/eye-search.svg');
 }

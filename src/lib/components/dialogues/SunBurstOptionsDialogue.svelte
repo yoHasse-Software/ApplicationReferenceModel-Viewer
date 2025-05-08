@@ -1,22 +1,25 @@
 
 <script lang="ts">
-    import {  database, diagramOptions, emptyOptions, enteties, openDialogue } from "$lib/datastore.svelte";
+    import {  closeDialogueOption,defaultPerspective,emptyOptions, isDialogueOpen } from "$lib/datastore.svelte";
     import type { RelationShipsOption } from "$lib/types";
-    import { lab } from "d3";
     import { onMount, tick } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
+    import type { DiagramOptions, LabelRelationShips, Perspective } from "../db/dataRepository";
+    import { getLabelRelations, idb } from "../db/dexie";
     import Dexie from "dexie";
-    import type { DiagramOptions, LabelRelationShips } from "../db/dataRepository";
+    import { scale } from "svelte/transition";
+
+    const { perspectiveId, optionsId } : { perspectiveId: number, optionsId: number} = $props();
+    let currentPerspective: Perspective = $state(defaultPerspective);
 
 
     let sunBurstOptions: DiagramOptions = $state({
         ...emptyOptions,
-        id: 1,
+        perspectiveId,
         diagramType: 'sunburst',
     });
     let labelOptions: string[] = $state([]);
 
-    const relationShipOptions = new SvelteMap<string, RelationShipsOption[]>();
     let labelToLabelRelationShips: LabelRelationShips[] = $state([]);
     let dialogueOnSide = $state(false);
 
@@ -56,7 +59,7 @@
 
     async function updateLabelOptions() {
         if(sunBurstOptions.labelHierarchy.length === 0){
-            const allLabels = await database.getAllLabels();
+            const allLabels = currentPerspective.selectedLabels || [];
             labelOptions = allLabels
                 .map((d) => d as string)
                 .filter((label) => label && label.length > 0)
@@ -70,7 +73,7 @@
             return;
         }
 
-        labelToLabelRelationShips = await database.getLabelRelations(sunBurstOptions.labelHierarchy);
+        labelToLabelRelationShips = await getLabelRelations(sunBurstOptions.labelHierarchy);
 
         const lastLabelInHierarchy = sunBurstOptions.labelHierarchy[sunBurstOptions.labelHierarchy.length - 1];
         const relatedOptions = getRelatedOptions(lastLabelInHierarchy).flatMap((rel => [rel.fromLabel, rel.toLabel]));
@@ -89,30 +92,33 @@
 
 
     async function displayOptionsChanged() {
-        await database.updateDiagramOptions(sunBurstOptions);
+
+        await idb.diagramOptions.put(Dexie.deepClone(sunBurstOptions));
     }
 
-     onMount(() => {
-        diagramOptions.subscribe(async (state) => {
-            const currentOptions = state.find((option) => option.diagramType === 'sunburst');
-            if (currentOptions) {
-                sunBurstOptions = currentOptions;
-            }
-            else {
-                await database.addDiagramOptions(sunBurstOptions);
-            }
-        });
+     onMount(async () => {
 
-        enteties.subscribe(async (data) => {
-            await updateLabelOptions();
-        })
+        console.log("Sunburst options dialogue opened");
+
+        sunBurstOptions = await idb.diagramOptions.get(optionsId) || {
+            ...emptyOptions,
+            perspectiveId,
+            diagramType: 'sunburst',
+        }
+
+        currentPerspective = await idb.perspectives.get(perspectiveId) || {
+            ...defaultPerspective,
+            id: perspectiveId,
+        }
+
+
+        await updateLabelOptions();
      });
      
 
 </script>
 
-{#if sunBurstOptions && openDialogue.get('sunburstoptions')}
-<dialog open class:side-dialogue={dialogueOnSide}>
+<dialog open class:side-dialogue={dialogueOnSide} transition:scale>
     <article>
         <header style="position: sticky; top: -1rem; z-index: 1;">
             <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
@@ -125,7 +131,7 @@
                             <span class="ico ico-arrow-bar-left"></span>
                         {/if}
                     </button>
-                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('sunburstoptions', false)} aria-label="add label">
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => closeDialogueOption('sunburstoptions')} aria-label="add label">
                         <span class="ico ico-x"></span>
                     </button>
                 </div>
@@ -234,8 +240,9 @@
     </article>
     </article>
 
+    </article>
+
 </dialog>
-{/if}
 
 <style>
     .grid {

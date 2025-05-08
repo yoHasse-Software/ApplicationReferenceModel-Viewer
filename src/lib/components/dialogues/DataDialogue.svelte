@@ -2,12 +2,14 @@
     import { goto } from "$app/navigation";
     import type { DataBaseOptions, Entity } from "$lib/components/db/dataRepository";
     import { getLocalStore } from "$lib/components/localStore.svelte";
-    import { createNewDataStore, database, selectDataStore } from "$lib/datastore.svelte";
+    import { closeDialogueOption,isDialogueOpen } from "$lib/datastore.svelte";
     import type { GraphData, NodeRelation } from "$lib/types";
-    import Dexie from "dexie";
+    import Dexie, { liveQuery } from "dexie";
     
     import Papa from "papaparse";
     import { onMount, tick } from "svelte";
+    import { idb } from "../db/dexie";
+    import { scale } from "svelte/transition";
     let loadType = $state("csv" as "csv" | "db"  | "json");
 
     let rawCsvRows: Array<Record<string, string>> = $state([]);
@@ -16,10 +18,30 @@
     let selectedLabels: string[] = $state([""]);
     let showLabelSelector = $state(false);
     let csvIdentityLabel: string = $state("name" as string);
-    let storeName = $state("");
     let storeNames: string[] = $state([]);
-    let currentStore: string = $state("");
+    let sampleTxtArea: HTMLTextAreaElement;
+    let loadedEnteteies = liveQuery(
+        () => idb.enteties.count()
+    );
+    let loadedRelationships = liveQuery(
+        () => idb.relationships.count()
+    );
+    const jsonGraphData: GraphData = $state({
+        nodes: [],
+        relationships: []
+    });
+    let overwriteExistingData = $state(false);
 
+    async function addToDataStore(dataGraph: GraphData) {
+                // const nodeTree = generateNodeTree(groupedData);
+        const deepClone = Dexie.deepClone(dataGraph);
+        await idb.enteties.bulkPut(deepClone.nodes).catch((error) => {
+            console.error('Error saving data to database:', error);
+        });
+        await idb.relationships.bulkPut(deepClone.relationships).catch((error) => {
+            console.error('Error saving data to database:', error);
+        });
+    }
 
     async function loadCsv(){
         const dataGraph = flatCsvToGraph(rawCsvRows, selectedLabels);
@@ -28,8 +50,11 @@
             return [];
         }
 
-        // const nodeTree = generateNodeTree(groupedData);
-        await createNewDataStore(storeName, dataGraph);
+        jsonGraphData.nodes = dataGraph.nodes;
+        jsonGraphData.relationships = dataGraph.relationships;
+        sampleTxtArea.value = JSON.stringify(jsonGraphData, null, 2);
+
+        await addToDataStore(jsonGraphData);
     }
 
     const canAddLabel = () => {
@@ -151,7 +176,7 @@
         }
 
         if(loadType === "csv"){
-            loadCsv();
+            await loadCsv();
         }
         else if(loadType === "db"){
             await loadFromDb();
@@ -189,7 +214,7 @@
 
         console.log("Graph data from DB:", graphData);
 
-        await createNewDataStore(storeName, graphData);
+        await addToDataStore(graphData);
         
     }
 
@@ -220,10 +245,8 @@
 
         labels = [];
         selectedLabels = [];
-        const jsonGraphData: GraphData = {
-            nodes: [],
-            relationships: []
-        };
+        jsonGraphData.nodes = [];
+        jsonGraphData.relationships = [];
 
         reader.onload = function (e) {
             const data = e.target?.result as string;
@@ -251,13 +274,11 @@
             reader.onloadend = resolve;
         });
 
-        await createNewDataStore(storeName, jsonGraphData);
-        
-        console.log("Graph data from JSON:", jsonGraphData);
 
-        goto('/', { replaceState: true });
+        sampleTxtArea.value = JSON.stringify(jsonGraphData, null, 2);
 
     }
+
 
     async function readCsv(file: File) {
         const reader = new FileReader();
@@ -293,71 +314,113 @@
 
     }
 
-    async function openDbStore(store: string) {
-        currentStore = store;
-        await selectDataStore(store);
+    let dialogueOnSide = $state(false);
+
+    async function onSave(){
+        if (overwriteExistingData) {
+            await clearAllData();
+        }
+        if (loadType === "csv") {
+            await loadCsv();
+        } else if (loadType === "db") {
+            await loadFromDb();
+        } else if (loadType === "json") {
+            await addToDataStore(jsonGraphData);
+        }
+
+        showLabelSelector = false;
+        location.reload(); // Reload the page to apply changes
+    }
+
+    async function clearAllData() {
+        // Display a confirmation dialog to the user
+        const confirmed = confirm("Are you sure you want to delete all data? This action cannot be undone.");
+        if (!confirmed) {
+            return; // User canceled, do nothing
+        }
+        await idb.enteties.clear();
+        await idb.relationships.clear();
+        await idb.perspectives.clear();
+        await idb.diagramOptions.clear();
+        await idb.conditionalFormatting.clear();
     }
 
 
     onMount(async () => {
         storeNames = await Dexie.getDatabaseNames() || [];
-        currentStore = getLocalStore<DataBaseOptions>('database-options').value.selectedDb;
     });
 
 </script>
 
+{#if isDialogueOpen('datastoreoptions')}
 
+<dialog open class:side-dialogue={dialogueOnSide} transition:scale>
+    <article>
+        <header style="position: sticky; top: -1rem; z-index: 1;">
+            <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
+                <span style="font-size: larger">Datastores</span>
+                
+                <div role="group" >
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => dialogueOnSide = !dialogueOnSide} aria-label="add label" data-tooltip="Toggle dialogue to side" data-placement="bottom">
+                        {#if dialogueOnSide}
+                            <span class="ico ico-arrow-bar-right"></span>
+                        {:else}
+                            <span class="ico ico-arrow-bar-left"></span>
+                        {/if}
+                    </button>
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => closeDialogueOption('datastoreoptions')} aria-label="add label">
+                        <span class="ico ico-x"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
 {#if !showLabelSelector}
-<main>
-    <div style="height: 80vh;justify-content: center; align-items: center; margin: 5rem;">
+        <article>
+            <header>
+                <span><strong>Loaded data</strong></span>
+            </header>
+            <div class="grid">
+            <div>
+            <small><em>Loaded Enteties:</em></small>
+            <input readonly type="text" value={$loadedEnteteies?.toString()} />
+        </div>
+            <div>
+            <small><em>Loaded Relationships:</em></small>
+            <input readonly type="text" value={$loadedRelationships?.toString()} />
+        </div>
+    </div>
+        </article>
     <article>
         <header>
-            <h2>Loaded Data</h2>
+            <span><strong>Add new dataset</strong></span>
         </header>
-        {currentStore || 'No data loaded'}
-    </article>
-    <div class="grid" >
-        
-    <article>
-        <header>
-            <span><strong>Select data to start</strong></span>
-        </header>
-        <label>
-            <span data-tooltip="Select a data store to load data from">Load new store</span>
-            <input type="text" bind:value={storeName} placeholder="Enter data name" />
-            <small><em>Enter a name for the data store to be able to switch</em></small>
-        </label>
+        <div class="grid">
+            <div>
+                <small><em>Load data from a csv or json file. The file must be in the correct format.</em></small>
+
+                <label> 
+                    <input style="margin:auto" type="file" accept=".csv, .json" onchange={onFileSelect} />
+                </label>
+            </div>
+            <div>
+                <small><em>Data that has been loaded</em></small>
+            
+                <textarea readonly bind:this={sampleTxtArea} >
+                </textarea>
+            </div>
+
+        </div>
         <label> 
-            <span data-tooltip="Select a file to load data from">Load from csv or json file</span>
-            <input style="margin:auto" disabled={storeName.trim().length > 3 ? null : true} type="file" accept=".csv, .json" onchange={onFileSelect} />
+            <input type="checkbox" role="switch" bind:checked={overwriteExistingData} aria-label="Overwrite existing data" /> Overwrite existing data
         </label>
-    </article>
-    <article>
-        <header>
-            <span><strong>Load data from database</strong></span>
-        </header>
-        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: auto;">
-        {#each storeNames as store}
-            <button class="secondary" 
-            style="padding: unset; color: black;"
-            onclick={async () => {
-                await openDbStore(store);
-            }} >
-                <article style="margin-bottom: unset;">
-                    {store}
-                </article>
+        <small><em>Overwrite existing data in the database. This will delete all existing data.</em></small>
+        <hr/>
+
+        <button type="button" onclick={async () => await onSave()} aria-label="add label">
+            Save
         </button>
-
-        {/each}
-    </div>
-
-
     </article>
-    </div>
 
-</div>
-
-</main>
 {:else}
 <div >
     <small><em>This section is required to select which columns are marked as labels and which to determine metadata from actual node-data.</em></small>
@@ -408,3 +471,42 @@
 
 </div>
 {/if}
+
+<article  class="danger-zone">
+    <details aria-label="Danger zone" style="margin-bottom: 0;">
+        <summary role="button" class="outline" style="color: red; "><b>Danger zone</b></summary>
+
+        <div style="padding: 1rem;" >
+
+            <button class="" style="border: 2px solid red; background-color: red; " type="button" onclick={async () => await clearAllData()} aria-label="remove label">
+                Delete all data
+            </button>
+        </div>
+    </details>
+
+</article>
+
+    </article>
+</dialog>
+
+{/if}
+
+
+<style>
+    .danger-zone {
+        border: 3px solid rgb(175, 22, 22); 
+        padding: 0;
+    }
+
+    .danger-zone summary {
+        border-bottom: 3px solid rgb(175, 22, 22); 
+    }
+
+    .danger-zone summary:active {
+        border: 3px solid rgb(175, 22, 22);
+    }
+
+    .danger-zone summary::after {
+
+    }
+</style>

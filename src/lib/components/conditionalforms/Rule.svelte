@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { database, enteties, RuleOperatoruleOptions } from "$lib/datastore.svelte";
+    import { RuleOperatoruleOptions } from "$lib/datastore.svelte";
     import { onMount } from "svelte";
     import type { ConditionalFormatting } from "../db/dataRepository";
+    import { idb } from "../db/dexie";
+    import { liveQuery } from "dexie";
 
 
 
@@ -35,7 +37,7 @@
             rule.value = "";
         }
 
-        const data = await database.getEnteties();
+        const data = await idb.enteties.toArray();
 
         const metaKeyOptionsRes = data.filter((node) => node.label === rule.label)
             .flatMap((node) => {
@@ -65,7 +67,7 @@
             rule.value = "";
         }
         // Order by value
-        const data = await database.getEnteties();
+        const data = await idb.enteties.toArray();;
         const nodeDataValueMap = data.filter((node) => {
             return node.label === rule.label && rule.metadataKey && ((rule.metadataKey in node) || node.metadata[rule.metadataKey]);
         }).map((node) => {
@@ -88,20 +90,25 @@
         nodeValueSelection = [...new Set(nodeDataValueMap)]
     }
 
+    const diagramOptions = liveQuery(() => idb.diagramOptions.toArray());
+
 
     onMount(async () => {
         // Initialize the map with the current rule's label
-        enteties.subscribe((value) => {
-            labels = value.map((node) => node.label).filter((label, index, self) => label && self.indexOf(label) === index).sort((a, b) => {
-                if (a < b) return -1;
-                if (a > b) return 1;
-                return 0;
+        diagramOptions.subscribe(async (options) => {
+
+            const diagramOptions = options.filter((opt) => opt.perspectiveId === rule.perspectiveId);
+            labels = diagramOptions
+                .flatMap((option) => option.labelHierarchy)
+                .filter((label, index, self) => label && self.indexOf(label) === index)
+                .sort((a, b) => {
+                    if (a < b) return -1;
+                    if (a > b) return 1;
+                    return 0;
             });
         });
         await generateMetaKeyOptions(true);
         await generateValueSelection(true);
-        
-
 
     });
 

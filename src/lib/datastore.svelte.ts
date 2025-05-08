@@ -1,10 +1,14 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { BlockNode, BoxModel, DiagramTypes, DisplayOptions, GraphData, RuleOperator, TitleModel} from "./types";
-import { get, writable } from "svelte/store";
-import { AppDexie } from "./components/db/dexie";
-import Dexie, { liveQuery } from "dexie";
-import type { ConditionalFormatting, DataBaseOptions, DataRepository, DiagramOptions, Entity, RelationShip } from "./components/db/dataRepository";
-import { localStore } from "./components/localStore.svelte";
+import { get, writable, type Readable, type Writable } from "svelte/store";
+import type { ConditionalFormatting, DataBaseOptions, DiagramOptions, Entity, RelationShip, Perspective } from "./components/db/dataRepository";
+import { idb } from "./components/db/dexie";
+import { liveQuery } from "dexie";
+
+export const defaultPerspective: Perspective = {
+  name: '',
+  selectedLabels: [],
+}
 
 
 // export const N1WIDTH = 1200;
@@ -32,7 +36,35 @@ export const defaultTitleModel: TitleModel = {
   },
 }
 
+export const defaultConditionalFormatting: ConditionalFormatting = {
+  perspectiveId: 0,
+  ignoredDiagrams: [],
+  isEnabled: true,
+  name: '',
+  label: '',
+  value: '',
+  metadataKey: '',
+  operator: 'equals',
+  styling: {
+      backgroundColor: {
+          isSet: false,
+          color: '#ffffff',
+      },
+      color: {
+          isSet: false,
+          color: '#000000',
+      },
+      borderColor: {
+          isSet: false,
+          color: '#000000',
+      },
+  },
+}
+
 export const emptyOptions: DiagramOptions = {
+  perspectiveId: 0,
+  name: '',
+  description: '',
   labelHierarchy: [],
   displayEmpty: true,
   columnsPerLabel: {},
@@ -41,7 +73,8 @@ export const emptyOptions: DiagramOptions = {
   hierarchyRelMod: [],
   titleModel: defaultTitleModel,
   boxModel: defaultBoxModel,
-  diagramType: "none"
+  diagramType: "none",
+  rootAtLabel: 'root'
 }
 
 export const RuleOperatoruleOptions: RuleOperator[] = [
@@ -58,108 +91,64 @@ export const RuleOperatoruleOptions: RuleOperator[] = [
     'notEndsWith',
 ];
 
-export type DialogueOption = 'sunburstoptions' | 'nestedblockoptions' | 'conditionalformatting' | 'labeloptions' | 'filteroptions' | 'exportoptions' | 'importoptions' | 'resetoptions' | 'helpoptions';
+export const diagramSelectOptions: DiagramTypes[] = [
+  'nestedblock',
+  'graph',
+  'sunburst'
+];
 
-export const openDialogue = new SvelteMap<DialogueOption, boolean>([
+
+export type DialogueOption = 'visualization' | 'datastoreoptions' | 'sunburstoptions' | 'nestedblockoptions' | 'conditionalformatting' | 'diagramoptioncreate';
+
+const openDialogue = new SvelteMap<DialogueOption, boolean>([
+  ['visualization', false],
+  ['datastoreoptions', false],
   ['sunburstoptions', false],
   ['nestedblockoptions', false],
   ['conditionalformatting', false],
-  ['labeloptions', false],
-  ['filteroptions', false],
-  ['exportoptions', false],
-  ['importoptions', false],
-  ['resetoptions', false],
-  ['helpoptions', false]
+  ['diagramoptioncreate', false],
 ]);
 
+export function isDialogueOpen(dialogue: DialogueOption | undefined = undefined) {
+  if (!dialogue) {
+    return Array.from(openDialogue.values()).some((value) => value === true);
+  }
+  return openDialogue.get(dialogue) ?? false;
+}
 
+export function toggleDialogueOption(dialogue: DialogueOption) {
+  const currentValue = openDialogue.get(dialogue) ?? false;
+  openDialogue.set(dialogue, !currentValue);
+}
 
-
-export const defaultDbName = 'default-nodata';
-const dbVersion = 1;
-
-let dbOptions = localStore<DataBaseOptions>('database-options', {
-  selectedDb: defaultDbName,
-  dbVersion: dbVersion
-});
-
-class DataRepo extends AppDexie{}; // This is the current database type, can be changed to any other database type that extends AppDexie
-
-export let database = new DataRepo(dbOptions.value.selectedDb, dbOptions.value.dbVersion);
-export const availableDatabases = new SvelteMap<string, DataRepository>();
-
-// await PopulateDataStores();
-
-export async function populateDataStores(){
-  console.log("Populating data stores...");
-  const availableStores = await database.getAvailableStores();
-  for (const store of availableStores) {
-    if (store !== dbOptions.value.selectedDb) {
-      const db = new DataRepo(store, dbOptions.value.dbVersion);
-      await db.initialize();
-      availableDatabases.set(store, db);
+export function openDialogueOption(dialogue: DialogueOption) {
+  openDialogue.forEach((value, key) => {
+    if (key !== dialogue) {
+      openDialogue.set(key, false);
     }
+  });
+  openDialogue.set(dialogue, true);
+}
+
+export function closeDialogueOption(dialogue: DialogueOption | undefined = undefined) {
+  if (!dialogue) {
+    openDialogue.forEach((value, key) => {
+      openDialogue.set(key, false);
+    });
+    return;
   }
-}
-
-export const enteties = writable<Entity[]>([]);
-export const relationships = writable<RelationShip[]>([]);
-export const conditionalFormatting = writable<ConditionalFormatting[]>([]);
-export const diagramOptions = writable<DiagramOptions[]>([]);
-
-export async function createNewDataStore(dbName: string, graphData: GraphData) {
-  dbOptions.value.selectedDb = dbName;
-  dbOptions.value.dbVersion = dbVersion;
-  database = new DataRepo(dbName, dbOptions.value.dbVersion);
-  await database.initialize();
-  await database.initData(graphData);
-  availableDatabases.set(dbName, database);
-  enteties.set(await database.getEnteties());
-  relationships.set(await database.getRelationships());
-  conditionalFormatting.set(await database.getConditionalFormatting());
-  diagramOptions.set(await database.getDiagramOptions());
-  console.log("Data store created and populated with data.");
-}
-
-export async function selectDataStore(dbName: string) {
-  dbOptions.value.selectedDb = dbName;
-  if (!availableDatabases.has(dbName)) {
-    const db = new DataRepo(dbName, dbOptions.value.dbVersion);
-    await db.initialize();
-    availableDatabases.set(dbName, db);
-  }
-
-  database = availableDatabases.get(dbName) as DataRepo;
-
-  enteties.set(await database.getEnteties());
-  relationships.set(await database.getRelationships());
-  conditionalFormatting.set(await database.getConditionalFormatting());
-  diagramOptions.set(await database.getDiagramOptions());
+  openDialogue.set(dialogue, false);
 }
 
 
-let inmemoryRules: ConditionalFormatting[] = $state([]);
-
-conditionalFormatting.subscribe((rules) => {
-  inmemoryRules = rules;
+export const currentViewState = $state({
+  currentPerspective: 0,
+  currentDiagramType: 'none' as DiagramTypes
 });
 
 
-
-export let DimensionMap = new SvelteMap<string, {height: number, width: number}>();
-export let PositionMap = new SvelteMap<string, {top: number, left: number}>();
-
-
-export function setDimensionMap(newMap: SvelteMap<string, {height: number, width: number}>) {
-    DimensionMap = newMap;
-}
-
-
-
-
-
-export function getConditionalRules(node: Entity | BlockNode): ConditionalFormatting[] {
-    const rules = inmemoryRules; // Get the rules from the store
+export function getConditionalRules(node: Entity | BlockNode, formattingOptions: ConditionalFormatting[]): ConditionalFormatting[] {
+    const rules = formattingOptions.filter((r) => r.isEnabled); // Get the rules from the store
   
     if (!rules || rules.length === 0) {
       return []; // No rules available
@@ -216,5 +205,3 @@ export function getConditionalRules(node: Entity | BlockNode): ConditionalFormat
 
     return condRules ?? [];
   }
-
-

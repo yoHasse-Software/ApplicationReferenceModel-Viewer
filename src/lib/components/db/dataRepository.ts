@@ -1,5 +1,5 @@
-import type { BoxModel, DiagramTypes, RuleOperator, TitleModel } from "$lib/types";
-import type { Writable } from "svelte/store";
+import type { BoxModel, DiagramTypes, GraphData, RuleOperator, TitleModel } from "$lib/types";
+import type { Readable, Writable } from "svelte/store";
 
 export interface Entity {
     id: string;
@@ -21,12 +21,15 @@ export interface RelationShip {
 }
 
 export interface ConditionalFormatting { 
-    id: string;
+    id?: number;
+    perspectiveId: number;
     name: string;
+    isEnabled: boolean;
     label: string; 
     value: string; 
     metadataKey: string;
     operator: RuleOperator;
+    ignoredDiagrams: number[];
     styling: {
         backgroundColor: {
             isSet: boolean;
@@ -47,7 +50,17 @@ export interface ConditionalFormatting {
     }
 }
 
+export interface Perspective {
+    id?: number;
+    name: string;
+    selectedLabels: string[];
+}
+
 export interface DiagramOptions {
+    id?: number;
+    name: string;
+    description: string;
+    perspectiveId: number;
     diagramType: DiagramTypes;
     labelHierarchy: string[];
     hierarchyRelMod: string[];
@@ -77,24 +90,4 @@ export type LabelRelationShips = {
     toLabel: string;
     relationshipType: "<->" | "->" | "<-";
     relationshipLabel: string;
-}
-
-
-export interface DataRepository {
-    getEnteties(): Promise<Entity[]>;
-    getEntitiesByLabel(label: string): Promise<Entity[]>;
-    getAllLabels(): Promise<string[]>;
-    getRelationships(): Promise<RelationShip[]>;
-    getConditionalFormatting(): Promise<ConditionalFormatting[]>;
-    getDiagramOptions(): Promise<DiagramOptions[]>;
-    getLabelRelationships(label:string): Promise<RelationShip[]>;
-    getLabelRelations(labels: string[]): Promise<LabelRelationShips[]>;
-    initialize(): Promise<void>;
-    getAvailableStores(): Promise<string[]>;
-    addConditionalFormatting(conditionalFormatting: ConditionalFormatting): Promise<void>;
-    updateConditionalFormatting(conditionalFormatting: ConditionalFormatting): Promise<void>;
-    deleteConditionalFormatting(id: string): Promise<void>;
-
-    addDiagramOptions(diagramOptions: DiagramOptions): Promise<void>;
-    updateDiagramOptions(diagramOptions: DiagramOptions): Promise<void>;
 }

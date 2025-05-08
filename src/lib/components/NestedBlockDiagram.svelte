@@ -3,24 +3,31 @@
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
     import type { BlockNode} from '$lib/types';
-    import { conditionalFormatting, diagramOptions, emptyOptions, getConditionalRules} from '$lib/datastore.svelte';
+    import {  emptyOptions, getConditionalRules} from '$lib/datastore.svelte';
     import { wrap } from '$lib/d3Utils';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import type { DiagramOptions } from './db/dataRepository';
+    import type { ConditionalFormatting, DiagramOptions } from './db/dataRepository';
+    import { idb } from './db/dexie';
+    import { page } from '$app/state';
     
     const { 
         root,
+        nestedBlockOptions,
         updateTooltipText,
         xRootOffset = 0,
         yRootOffset = 0,
 
      }: { 
         root: BlockNode,
+        nestedBlockOptions: DiagramOptions,
         updateTooltipText: (text: string[]) => void,
         xRootOffset?: number,
         yRootOffset?: number,
      } = $props();
+
+    const perspectiveId = parseInt(page.params.id || '0', 10); // Get the perspective ID from the URL parameters
+    const diagramId = parseInt(page.params.diagramId || '0', 10); // Get the diagram ID from the URL parameters
 
     let group: SVGGElement;
 
@@ -28,14 +35,8 @@
 
 
 
-     let displayOptions: DiagramOptions = $state({
-      ...emptyOptions,
-      diagramType: 'nestedblock',
-     })
-
-
-    function drawNode(node: BlockNode, parentGroup: any) {
-      const options = displayOptions;
+    function drawNode(node: BlockNode, conditionalFormattingOptions: ConditionalFormatting[], parentGroup: any) {
+      const options = nestedBlockOptions;
       const levelIdx = options.labelHierarchy.indexOf(node.label) || 0;
       const level = levelIdx > -1 ? levelIdx : 0; // Default to 0 if not found
       const isLeaf = level === options.labelHierarchy.length - 1;
@@ -43,7 +44,7 @@
       const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
       const textColor =  isLeaf ? colors.get('contrastInverse') : level % 2 === 0 ? colors.get('contrastInverse') : colors.get('secondary');
 
-      const conditionalFormatting = getConditionalRules(node);
+      const conditionalFormatting = getConditionalRules(node, conditionalFormattingOptions);
 
       const textContent = conditionalFormatting.filter(rule => rule.styling.content)
         .map(rule => rule.styling.content).join(' ');
@@ -53,7 +54,7 @@
       // Only use the last color if multiple rules are applied
       const borderColor = conditionalFormatting.findLast(rule => rule.styling.borderColor.isSet)?.styling.borderColor.color || fillColor || "#fff";
 
-      const titleModel = options.titleModel || displayOptions.titleModel!;
+      const titleModel = options.titleModel || nestedBlockOptions.titleModel!;
 
       const group = parentGroup.append("g")
         .attr("data-nodename", node.name)
@@ -106,28 +107,25 @@
       // Do a foreach which sends the child node and also previous node to the next level
       node.children?.reduce((prev, child, idx) => {
         if(prev.id === node.id){
-          drawNode(child, group);
+          drawNode(child,conditionalFormattingOptions, group);
           return child;
         }
 
-        drawNode(child, group); // Pass the previous node to the child node
+        drawNode(child,conditionalFormattingOptions, group); // Pass the previous node to the child node
         return child; // Return the current child as the previous node for the next iteration
       }, node); // Start with the current node as the previous node
 
 
     }
 
-    function drawBlockDiagram(orgData: BlockNode, groupContainer: d3.Selection<SVGGElement, unknown, null, undefined>) {
-      // clear the groupContainer
-      // groupContainer.remove(); // Clear the SVG before drawing
-
+    function drawBlockDiagram(orgData: BlockNode, formattingOptions: ConditionalFormatting[], groupContainer: d3.Selection<SVGGElement, unknown, null, undefined>) {
       orgData.children?.reduce((prev, node, idx) => {
           if(prev.id === orgData.id) {
-              drawNode(node, groupContainer); // Draw the root node
+              drawNode(node, formattingOptions, groupContainer); // Draw the root node
               return node;
           }
 
-          drawNode(node, groupContainer);
+          drawNode(node, formattingOptions, groupContainer);
           return node; // Return the current node as the previous node for the next iteration
         }, orgData); // Start with the root node as the previous node
     }
@@ -135,37 +133,26 @@
     let initialized = $state(false); // Flag to check if the diagram is initialized
     
 
-    onMount(() => {
+    onMount(async () => {
 
       const cssRoot = getComputedStyle(document.documentElement);
-        const picoColors = getPicoColors(cssRoot);
+      const picoColors = getPicoColors(cssRoot);
 
-        (Object.keys(picoColors) as Array<keyof typeof picoColors>).forEach((key, idx) => {
-          const color = picoColors[key];
-          colors.set(key, [color]);
-        });
-        
+      (Object.keys(picoColors) as Array<keyof typeof picoColors>).forEach((key, idx) => {
+        const color = picoColors[key];
+        colors.set(key, [color]);
+      });
 
-        conditionalFormatting.subscribe((data) => {
-          console.log("Conditional formatting data: "); // Log the conditional formatting data for debugging
-          if (data && initialized) {
-            console.log("Conditional formatting data: ", data); // Log the conditional formatting data for debugging
-            drawBlockDiagram(root, d3.select(group));
-          }
-        });
+      const formattingOptions = await idb.conditionalFormatting
+        .where('perspectiveId')
+        .equals(perspectiveId)
+        .and((rule) => !(rule.ignoredDiagrams?.includes(diagramId) ?? false))
+        .toArray();
 
-        diagramOptions.subscribe((state) => {
-          const currentOptions = state.find((option) => option.diagramType === 'nestedblock');
-          if (currentOptions && initialized) {
-            displayOptions = currentOptions;
-            drawBlockDiagram(root, d3.select(group));
-          }
-        });
-
-        drawBlockDiagram(root, d3.select(group));
+      drawBlockDiagram(root, formattingOptions, d3.select(group));
 
 
-        initialized = true; // Set initialized to true after the first render
+      initialized = true; // Set initialized to true after the first render
 
     });
 

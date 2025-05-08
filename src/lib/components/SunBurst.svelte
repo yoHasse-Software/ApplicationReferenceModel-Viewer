@@ -4,13 +4,14 @@
     import type { BlockNode, LabelHierarchy } from '$lib/types';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import { diagramOptions, emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
-    import type { ConditionalFormatting, DiagramOptions } from './db/dexie';
+    import { emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
     import { sunBurstWrap } from '$lib/d3Utils';
+    import type { ConditionalFormatting, DiagramOptions } from './db/dataRepository';
 
 
     const { 
         root,
+        sunBurstOptions,
         updateTooltipText,
         width,
         xRootOffset = 0,
@@ -18,10 +19,12 @@
 
      }: { 
         root: BlockNode,
+        sunBurstOptions: DiagramOptions,
         updateTooltipText: (text: string[]) => void,
         width: number,
         xRootOffset?: number,
         yRootOffset?: number,
+
      } = $props();
 
      type ArcDatum = { x0: number; x1: number; y0: number; y1: number };
@@ -46,7 +49,6 @@
 
     const colors = new SvelteMap<string, string>();
 
-    let sunBurstOptions: DiagramOptions = $state(emptyOptions);
     const conditionalFormattingRuleMap = new SvelteMap<string, ConditionalFormatting[]>();
     
     function getColor(n: string) {
@@ -161,7 +163,6 @@
      * Render (or re‑render) the diagram with `rootNode` as the new root.
      */
     async function render(rootNode: d3.HierarchyNode<BlockNode>) {
-      console.log(JSON.stringify(rootNode.data, null, 2));
         if(rootNode.children?.length === 0) return;
 
         conditionalFormattingRuleMap.clear();
@@ -260,16 +261,7 @@
         return;
       }
 
-      diagramOptions.subscribe(async (state) => {
-        const currentOptions = state.find((option) => option.diagramType === 'sunburst');
-        if (currentOptions) {
-          sunBurstOptions = currentOptions;
-          
-          await render(d3.hierarchy(root));
-        }
-      });
-
-
+      await render(d3.hierarchy(root));
     });
 
   function removePathListeners() {

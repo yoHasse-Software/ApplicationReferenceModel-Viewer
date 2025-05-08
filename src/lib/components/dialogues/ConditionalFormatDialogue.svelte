@@ -1,16 +1,29 @@
 
 <script lang="ts">
-    import { conditionalFormatting, database, openDialogue} from "$lib/datastore.svelte";
-    import { onMount } from "svelte";
+    import { closeDialogueOption, defaultConditionalFormatting, isDialogueOpen} from "$lib/datastore.svelte";
+    import { onMount, tick } from "svelte";
     import Rule from "../conditionalforms/Rule.svelte";
     import Base from "../conditionalforms/Base.svelte";
     import NodeStyling from "../conditionalforms/NodeStyling.svelte";
     import FontStyling from "../conditionalforms/FontStyling.svelte";
     import type { ConditionalFormatting } from "../db/dataRepository";
+    import { idb } from "../db/dexie";
+    import Dexie from "dexie";
+    import { scale } from "svelte/transition";
+    import { page } from "$app/state";
+    import { SvelteMap } from "svelte/reactivity";
 
+    const { perspectiveId, diagramId }: { perspectiveId: number, diagramId: number } = $props();
+
+    const isOnPerspectivePage = diagramId === 0;
+    let ignoredDiagramNames: string[] = [];
     
-    let detailsRefs: (HTMLDetailsElement | null)[] = $state([]);
+    
+    let detailsRefs: (HTMLDetailsElement)[] = $state([]);
     let dialogueOnSide = $state(false);
+    let formattingRules: ConditionalFormatting[] = $state([]);
+    let enabledRules: boolean[] = [];
+
 
     function canSaveRule(rule: ConditionalFormatting): boolean {
 
@@ -41,7 +54,7 @@
     }
 
 
-    async function saveConditionalFormattningRules(index: number, id: string) {
+    async function saveConditionalFormattningRules(index: number, id: number) {
 
         if (detailsRefs[index]) {
             detailsRefs[index].open = false;
@@ -53,67 +66,117 @@
             return;
         }
 
-        await database.updateConditionalFormatting(rule);
+        await idb.conditionalFormatting.put(Dexie.deepClone(rule));
     }
 
-    async function removeConditionalFormattingRule(index: number, id: string) {
+    
+
+    async function onToggleRule(index: number, id: number) {
+        const rule = formattingRules.find((rule) => rule.id === id);
+        if (!rule) {
+            console.error("Rule not found");
+            return;
+        }
+
+        if(!rule.ignoredDiagrams) {
+            console.log("Adding diagramId to ignoredDiagrams: ", rule.ignoredDiagrams);
+            rule.ignoredDiagrams = [];
+        }
+
+        if(!isOnPerspectivePage && rule.ignoredDiagrams.includes(diagramId) && enabledRules[index]) {
+            console.log("Removing diagramId from ignoredDiagrams: ", rule.ignoredDiagrams);
+            rule.ignoredDiagrams = rule.ignoredDiagrams.filter((id) => id !== diagramId);
+        }
+
+
+        if(!isOnPerspectivePage && !rule.ignoredDiagrams.includes(diagramId) && !enabledRules[index]) {
+            console.log("Adding diagramId from ignoredDiagrams: ", rule.ignoredDiagrams);
+            rule.ignoredDiagrams.push(diagramId);
+        }
+
+
+        if(isOnPerspectivePage){
+            rule.isEnabled = !rule.isEnabled; // Toggle the global rule
+        }
+        
+        await idb.conditionalFormatting.put(Dexie.deepClone(rule));
+    }
+
+    async function removeConditionalFormattingRule(index: number, id: number) {
         formattingRules.splice(index, 1);
 
         if (detailsRefs[index]) {
             detailsRefs[index].open = false;
         }
 
-        // Remove the rule from the database
-        await database.deleteConditionalFormatting(id);
+        await idb.conditionalFormatting.delete(id);
     }
 
-    let formattingRules: ConditionalFormatting[] = $state([]);
+    async function ignoreRule(index: number, id: number) {
+        const rule = formattingRules.find((rule) => rule.id === id);
+        if (!rule) {
+            console.error("Rule not found");
+            return;
+        }
 
-    function addRule() {
-        formattingRules.push({
-            id: crypto.randomUUID(),
-            name: '',
-            label: '',
-            value: '',
-            metadataKey: '',
-            operator: 'equals',
-            styling: {
-                backgroundColor: {
-                    isSet: false,
-                    color: '#ffffff',
-                },
-                color: {
-                    isSet: false,
-                    color: '#000000',
-                },
-                borderColor: {
-                    isSet: false,
-                    color: '#000000',
-                },
-            },
-        });
+        rule.isEnabled = false;
+        await idb.conditionalFormatting.put(Dexie.deepClone(rule));
     }
 
 
-    onMount(() => {
-        conditionalFormatting.subscribe((data) => {
-            if (data) {
-                formattingRules = data;
+    async function addRule() {
+        const newRule = { ...defaultConditionalFormatting, perspectiveId };
+        await idb.conditionalFormatting.put(Dexie.deepClone(newRule));
+        formattingRules.push(newRule);
+
+        await tick(); // Wait for the DOM to update before proceeding
+        if (detailsRefs[formattingRules.length - 1]) {
+            detailsRefs[formattingRules.length - 1].open = true;
+        }
+    }
+
+
+    onMount(async () => {
+        console.log("Conditional formatting rules: ", formattingRules);
+        formattingRules = await idb.conditionalFormatting.where('perspectiveId').equals(perspectiveId).toArray();
+        for(let index = 0; index < formattingRules.length; index++) {
+            const rule = formattingRules[index];
+            if (isOnPerspectivePage && rule.isEnabled) {
+                enabledRules[index] = true;
             }
-        });
+            else if (!isOnPerspectivePage && rule.ignoredDiagrams?.includes(diagramId)) {
+                enabledRules[index] = false;
+            } else {
+                enabledRules[index] = rule.isEnabled;
+            }
+        }
+
+        // TODO: Add diagrams that are ignored, below doesn't work...
+
+        for(let index = 0; index < formattingRules.length; index++) {
+            const rule = formattingRules[index];
+            if(rule.ignoredDiagrams?.length > 0) {
+                const diagramNames = await idb.diagramOptions.where('id').anyOf(rule.ignoredDiagrams).toArray();
+                ignoredDiagramNames.push(...diagramNames.map((d) => d.name));
+            }
+        }
+
+        console.log("Conditional formatting rules: ", formattingRules);
+        
+
+
     });
 
 </script>
 
 
-{#if openDialogue.get('conditionalformatting') || false}
+{#if isDialogueOpen('conditionalformatting')}
 
-<dialog open class:side-dialogue={dialogueOnSide}>
+<dialog open class:side-dialogue={dialogueOnSide} transition:scale>
     <article>
         <header>
             <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
                 <span style="font-size: larger">Conditional Formatting</span>
-                
                 <div role="group" >
                     <button style="margin:unset;" type="button" class="outline" onclick={() => dialogueOnSide = !dialogueOnSide} aria-label="add label" data-tooltip="Toggle dialogue to side" data-placement="bottom">
                         {#if dialogueOnSide}
@@ -122,64 +185,99 @@
                             <span class="ico ico-arrow-bar-left"></span>
                         {/if}
                     </button>
-                    <button style="margin:unset;" type="button" class="outline" onclick={() => openDialogue.set('conditionalformatting', false)} aria-label="add label">
+                    <button style="margin:unset;" type="button" class="outline" onclick={() => closeDialogueOption('conditionalformatting')} aria-label="add label">
                         <span class="ico ico-x"></span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <div>
-            <div style="display: flex; align-items: center; margin: 1rem 0;">
-                <span style="font-size: larger">Rules</span> 
-
-                <button 
-                    style="border: none; background: none; cursor: pointer; color: var(--pico-primary);"
-                    aria-label="add rule"
-                    data-tooltip="Add rule"
-                    onclick={addRule}>
-                <span class="ico ico-copy-plus"></span>
-                </button>
-            </div>
-            
-            {#each formattingRules as rule, index }
-            <article class="rule-container" >
-                <details bind:this={detailsRefs[index]} aria-label="Display rule">
-                    <summary role="button" class="outline">{rule.name.trim().length > 0 ? rule.name: "New rule"}</summary>
-                    <div class="rule-content">
-                        <Base bind:rule={formattingRules[index]} />
-                        <Rule bind:rule={formattingRules[index]} />
-                    <article>
-                        <header>
-                            <span>Styling</span>
-                        </header>
-                        <NodeStyling bind:rule={formattingRules[index]} />
-                        <FontStyling bind:rule={formattingRules[index]} />
-                    </article>
-
-                    <div role="group">
-                        <button onclick={() => saveConditionalFormattningRules(index, rule.id)}  aria-label="Add rule"
-                            disabled={canSaveRule(rule) ? false : true}>
-                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-device-floppy"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
-                        </button>
-                        <button onclick={() => removeConditionalFormattingRule(index, rule.id)} class="outline secondary" aria-label="Remove rule">
-                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-trash-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7h16" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /><path d="M10 12l4 4m0 -4l-4 4" /></svg>
-                        </button>
-                    </div>
-                    {#if !canSaveRule(rule)}
-                        <small>
-                            <em >
-                                Rule needs either content or specific styling to be applied before it can be saved.
-                            </em>
-                        </small>
-
+        <article>
+            <header>
+                <span>Enabled Rules
+                    {#if diagramId > 0}
+                        for {diagramId}. Disable to ignore in this specific diagram.
+                        {:else}
+                        for all diagrams. Disable to ignore in all diagrams.
                     {/if}
-                    </div>
-                </details>
-            </article>
-
+                </span>
+            </header>
+            {#each formattingRules as rule, index }
+                <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" role="switch" bind:checked={enabledRules[index]} onchange={async () => await onToggleRule(index, rule.id!)} aria-label="Enable rule" />
+                        {rule.name.trim().length > 0 ? rule.name: "New rule"}
+                    </label>
+                </div>
+            {/each}
+            <div>
+            {#each ignoredDiagramNames as name}
+                <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
+                    
+                        {name} (Ignored)
+                    
+                </div>
             {/each}
         </div>
+
+
+        </article>
+
+        <article>
+            <header>
+                <div style="display: flex; align-items: center; ">
+                    <span style="font-size: larger">Rules</span> 
+                    <button 
+                        style="border: none; background: none; cursor: pointer; color: var(--pico-primary);"
+                        aria-label="add rule"
+                        data-tooltip="Add rule"
+                        onclick={addRule}>
+                    <span class="ico ico-copy-plus"></span>
+                    </button>
+                </div>
+            </header>
+            <div>
+            {#each formattingRules as rule, index }
+                <article class="rule-container" >
+                    <details bind:this={detailsRefs[index]} aria-label="Display rule">
+                        <summary role="button" class="outline">{rule.name.trim().length > 0 ? rule.name: "New rule"}</summary>
+                        <div class="rule-content">
+                            <Base bind:rule={formattingRules[index]} />
+                            <Rule bind:rule={formattingRules[index]} />
+                        <article>
+                            <header>
+                                <span>Styling</span>
+                            </header>
+                            <NodeStyling bind:rule={formattingRules[index]} />
+                            <FontStyling bind:rule={formattingRules[index]} />
+                        </article>
+    
+                        <div role="group">
+                            <button onclick={() => saveConditionalFormattningRules(index, rule.id!)}  aria-label="Add rule"
+                                disabled={canSaveRule(rule) ? false : true}>
+                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-device-floppy"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+                            </button>
+                            <button onclick={() => removeConditionalFormattingRule(index, rule.id!)} class="outline secondary" aria-label="Remove rule">
+                                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-trash-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7h16" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /><path d="M10 12l4 4m0 -4l-4 4" /></svg>
+                            </button>
+                        </div>
+                        {#if !canSaveRule(rule)}
+                            <small>
+                                <em >
+                                    Rule needs either content or specific styling to be applied before it can be saved.
+                                </em>
+                            </small>
+    
+                        {/if}
+                        </div>
+                    </details>
+                </article>
+    
+                {/each}
+            </div>
+        </article>
+
+
 
         <footer>
 

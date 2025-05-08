@@ -1,75 +1,62 @@
 <script lang="ts">
-    import { enteties } from "$lib/datastore.svelte";
+    import { goto } from "$app/navigation";
+    import type { Perspective } from "$lib/components/db/dataRepository";
+    import { idb } from "$lib/components/db/dexie";
+    import { currentViewState, toggleDialogueOption } from "$lib/datastore.svelte";
+    import { liveQuery } from "dexie";
     import { onMount } from "svelte";
 
-    let dataLength = $state(0);
 
-    onMount(() => {
+    const loadedEnteteies = liveQuery(
+        () => idb.enteties.count()
+    );
 
-        // Initialize the conditional formatting rules
-        enteties.subscribe((value) => {
-            dataLength = value.length;
-        });
+    onMount(async () => {
 
     });
 
 </script>
 
-{#if dataLength > 0}
-
-<div class="grid">
-    <a href="/nestedblock" class="diagramSelectOption">
-        <article>
-            <header>
-                <h2>Nested Block</h2>
-            </header>
-            <span class="diagram nestedblock">
-            </span>
-        </article>
-    </a>
-    <a href="/sunburst" class="diagramSelectOption" >
-        <article>
-            <header>
-                <h2>Sunburst Diagram</h2>
-            </header>
-            <span class="diagram sunburst">
-            </span>
-        </article>
-    </a>
-
-<a  href="/graph" class="diagramSelectOption">
-        <article>
-            <header>
-                <h2>Graph</h2>
-            </header>
-            <span class="diagram graph">
-            </span>
-        </article>
-    </a>
-</div>
+{#if $loadedEnteteies > 0}
+<button class="article-button" aria-label="data-options" data-placement="right" onclick={() => toggleDialogueOption('datastoreoptions')} >
+    <article >
+        <header>Modify Data</header>
+        <small><em>Click here to upload, delete, or modify your data.</em></small>
+    </article>
+</button>
 
 {:else}
-<a  href="/loadData" class="diagramSelectOption">
-
-    <div style="height: 100%; width: 100%;display:flex; left:0; right:0; top:0; bottom:0; justify-content:center; align-items:center;">
-        <article style="height: 50%;">
-            <header>
-                <h2>No Data</h2>
-            </header>
-            <p>Please upload a file to see the diagrams.</p>
-        </article>
+<div style="height: 100%;">
+    <article class="welcome-article">
+        <header>
+            Welcome to the Data Analysis Tool!
+        </header>
+        <p>It seems like you haven't uploaded any dataset yet. To get started, please upload some data.</p>
+        <button class="" style="width: 100%;" onclick={() => {
+            toggleDialogueOption('datastoreoptions');
+        }}>Upload data</button>
+        <small>Once you have created a data entity, you can come back here to create perspectives and analyze your data.</small>
+    </article>
     </div>
-</a>
-
 {/if}
+
+
 
 
 <style>
 
-    .grid {
-        margin: 2rem;
-        grid-template-columns: repeat(2, 1fr);
+    .welcome-article {
+        position: absolute; 
+        top: 0; 
+        left: 0; 
+        bottom: 0; 
+        right: 0; 
+        max-width: 600px; 
+        max-height: 400px; 
+        margin: auto; 
+        height: fit-content;
     }
+    
     .diagram {
         background-size: contain;
         display: block;

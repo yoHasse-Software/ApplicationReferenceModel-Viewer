@@ -1,5 +1,5 @@
 import type { GraphData, RelationShipsOption } from "$lib/types";
-import type { Entity } from "../db/dexie";
+import type { Entity } from "$lib/db/dataRepository";
 
 
 export function buildRelationShipMap(data: GraphData): Map<string, RelationShipsOption[]> {

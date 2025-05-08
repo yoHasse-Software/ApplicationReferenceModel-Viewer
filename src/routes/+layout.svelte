@@ -1,42 +1,32 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
-    import ConditionalFormatDialogue from '$lib/components/dialogues/ConditionalFormatDialogue.svelte';
-    import NestedBlockOptionDialogue from '$lib/components/dialogues/NestedBlockOptionDialogue.svelte';
-    import SunBurstOptionsDialogue from '$lib/components/dialogues/SunBurstOptionsDialogue.svelte';
+    import { idb } from '$lib/components/db/dexie';
+    import DataDialogue from '$lib/components/dialogues/DataDialogue.svelte';
+    import PerspectiveDialogue from '$lib/components/dialogues/PerspectiveDialogue.svelte';
     import Sidebar from '$lib/components/Sidebar.svelte';
-    import { enteties, populateDataStores } from '$lib/datastore.svelte';
-    import Dexie from 'dexie';
+    import { closeDialogueOption } from '$lib/datastore.svelte';
+    import Dexie, { liveQuery } from 'dexie';
     import { onMount } from 'svelte';
 
     let { children } = $props();
-
-    let entityLength = $state(0);
-
-
+    
+    const loadedEnteteies = liveQuery(
+        () => idb.enteties.count()
+    );
     
     onMount(async () => {
         // Initialize the conditional formatting rules
-
-        await populateDataStores();
-
-        enteties.subscribe((value) => {
-            console.log("Entities length: ", value.length);
-            entityLength = value.length;
-        });
-        
+        // Close all dialogues on mount
     });
 
 </script>
 
+<DataDialogue />
+<PerspectiveDialogue />
 
-
-<NestedBlockOptionDialogue />
-<SunBurstOptionsDialogue />
-<ConditionalFormatDialogue />
-
-<main class:container={entityLength === 0} class:container-fluid={entityLength > 0} >
-    <div class="grid" style="overflow: hidden;">
+<main class="container-fluid" >
+    <div class="grid" style="overflow: hidden; margin-top: 2rem;">
       <Sidebar />
       <div id="content">
         {@render children()}
