@@ -98,7 +98,7 @@ export const diagramSelectOptions: DiagramTypes[] = [
 ];
 
 
-export type DialogueOption = 'visualization' | 'datastoreoptions' | 'sunburstoptions' | 'nestedblockoptions' | 'conditionalformatting' | 'diagramoptioncreate';
+export type DialogueOption = 'visualization' | 'datastoreoptions' | 'sunburstoptions' | 'nestedblockoptions' | 'conditionalformatting' | 'diagramoptioncreate' | 'nodeinfo';
 
 const openDialogue = new SvelteMap<DialogueOption, boolean>([
   ['visualization', false],
@@ -107,6 +107,7 @@ const openDialogue = new SvelteMap<DialogueOption, boolean>([
   ['nestedblockoptions', false],
   ['conditionalformatting', false],
   ['diagramoptioncreate', false],
+  ['nodeinfo', false],
 ]);
 
 export function isDialogueOpen(dialogue: DialogueOption | undefined = undefined) {

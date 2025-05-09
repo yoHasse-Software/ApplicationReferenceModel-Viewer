@@ -6,17 +6,18 @@
     import * as d3 from 'd3';
     import { getPicoColors } from '$lib/colorUtils';
     import { currentViewState, isDialogueOpen, openDialogueOption } from '$lib/datastore.svelte';
-    import type { DiagramOptions } from '$lib/components/db/dataRepository';
+    import type { DiagramOptions, Entity } from '$lib/components/db/dataRepository';
     import NestedBlockOptionDialogue from '$lib/components/dialogues/NestedBlockOptionDialogue.svelte';
     import { getLabelRelations, idb } from '$lib/components/db/dexie';
     import { page } from '$app/state';
     import { liveQuery } from 'dexie';
     import ConditionalFormatDialogue from '$lib/components/dialogues/ConditionalFormatDialogue.svelte';
+    import InformationDialogue from '$lib/components/dialogues/InformationDialogue.svelte';
 
     const perspectiveId = parseInt(page.params.id, 10); // Get the perspective ID from the URL parameters
     const diagramId = parseInt(page.params.diagramid, 10); // Get the diagram ID from the URL parameters
     const currentOptions = liveQuery(() => idb.diagramOptions.get(diagramId)); // Fetch the current diagram options from the database
-
+    let entityInfo: Entity | undefined = $state(); // State to hold entity information
 
     // Example grouped data based on your CSV
     let svgContainer: SVGSVGElement;
@@ -60,6 +61,15 @@
 
     function updateTooltipText(text: string[]) {
         // Update tooltip text logic here
+    }
+
+    async function openInfoDialogue(id: string) {
+        entityInfo = await idb.enteties.get(id); // Fetch entity information based on the node ID
+        if (entityInfo) {
+            openDialogueOption('nodeinfo'); // Open the information dialogue
+        } else {
+            console.error('Entity not found in the database!'); // Log an error if the entity is not found
+        }
     }
 
     let colors: ColorPalette = $state(defaultColorPalette);
@@ -126,6 +136,9 @@
   </div>
   {/if}
 
+{#if isDialogueOpen('nodeinfo') && entityInfo}
+  <InformationDialogue entity={entityInfo} />
+{/if}
   
 
   <svg bind:this={svgContainer} width="100%" height="90vh" style="border: 1px solid #ccc">
@@ -135,8 +148,11 @@
           {@const { xRootOffset, yRootOffset } = getRootPosition(node, idx) } 
 
           <NestedBlockDiagram root={node} 
+              perspectiveId={perspectiveId}
+              diagramId={diagramId}
               nestedBlockOptions={$currentOptions}
               updateTooltipText={updateTooltipText} 
+              openInfoDialogue={openInfoDialogue}
               xRootOffset={xRootOffset} yRootOffset={yRootOffset} />
 
       {/each}

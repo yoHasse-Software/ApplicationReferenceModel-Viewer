@@ -147,6 +147,8 @@
             {@const { xRootOffset, yRootOffset } = getRootPosition($currentOptions, node, idx) }
     
             <SunBurst root={node} 
+                perspectiveId={perspectiveId}
+                diagramId={diagramId}
                 sunBurstOptions={$currentOptions}
                 updateTooltipText={updateTooltipText} 
                 width={diameter} 

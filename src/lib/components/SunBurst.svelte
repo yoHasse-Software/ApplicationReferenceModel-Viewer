@@ -4,14 +4,18 @@
     import type { BlockNode, LabelHierarchy } from '$lib/types';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import { emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
+    import { defaultConditionalFormatting, emptyOptions, getConditionalRules } from '$lib/datastore.svelte';
     import { sunBurstWrap } from '$lib/d3Utils';
     import type { ConditionalFormatting, DiagramOptions } from './db/dataRepository';
+    import { idb } from './db/dexie';
+    import { liveQuery } from 'dexie';
 
 
     const { 
         root,
         sunBurstOptions,
+        perspectiveId,
+        diagramId,
         updateTooltipText,
         width,
         xRootOffset = 0,
@@ -20,6 +24,8 @@
      }: { 
         root: BlockNode,
         sunBurstOptions: DiagramOptions,
+        perspectiveId: number,
+        diagramId: number,
         updateTooltipText: (text: string[]) => void,
         width: number,
         xRootOffset?: number,
@@ -51,18 +57,43 @@
 
     const conditionalFormattingRuleMap = new SvelteMap<string, ConditionalFormatting[]>();
     
-    function getColor(n: string) {
-        const level = sunBurstOptions.labelHierarchy.findIndex((label) => label === n);
+    function getColor(n: BlockNode, rules: ConditionalFormatting[]): {
+        fill: string;
+        text: string;
+        border: string;
+    } {
+      const level = sunBurstOptions.labelHierarchy.findIndex((label) => label === n.label);
         const isLeaf = level === sunBurstOptions.labelHierarchy.length - 1;
 
-        const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
-        const textColor =  isLeaf ? colors.get('contrastInverse') : level % 2 === 0 ? colors.get('contrastInverse') : colors.get('secondary');
-        
+        const primaryColor = colors.get('primary') ?? "#000";
+        const secondaryColor = colors.get('secondary') ?? "#fff";
+        const contrastInverseColor = colors.get('contrastInverse') ?? "#fff";
+
+        const fillColor = isLeaf ? primaryColor : level % 2 === 0 ? secondaryColor : contrastInverseColor;
+        const textColor =  isLeaf ? contrastInverseColor : level % 2 === 0 ? contrastInverseColor: secondaryColor;
+
+        if(rules.length > 0) {
+          
+            return {
+                fill: rules.find((r) => r.styling.backgroundColor.isSet)?.styling.backgroundColor.color ?? fillColor,
+                text: rules.find((r) => r.styling.color.isSet)?.styling.color.color ?? textColor,
+                border: rules.find((r) => r.styling.borderColor.isSet)?.styling.borderColor.color ?? textColor
+
+            };
+        }
+
         return {
             fill: fillColor,
-            text: textColor
+            text: textColor,
+            border: textColor,
         };
     };
+
+    function getTextContent(n: BlockNode, rules: ConditionalFormatting[]): string {
+      const textContent = rules.filter(rule => rule.styling.content)
+        .map(rule => rule.styling.content).join(' ');
+      return `${n.name} ${textContent}`;
+    }
 
     // Partition helper (value only on leaves so children take 100 %)
     function partitionRoot(node: d3.HierarchyNode<BlockNode>, R: number) {
@@ -89,7 +120,7 @@
     }
 
 
-    function addArcListeners(rootNode: d3.HierarchyNode<BlockNode>,sel: d3.Selection<SVGPathElement, any, any, any>) {
+    function addArcListeners(rootNode: d3.HierarchyNode<BlockNode>,sel: d3.Selection<SVGPathElement, any, any, any>, formattingOptions: ConditionalFormatting[]) {
       activeNodes.push(rootNode.data.id);
       sel // remove any previous listeners
         .on('click' + NS, async (event: MouseEvent, d: any) => {
@@ -99,17 +130,19 @@
               const parentNode = d3.hierarchy(root).descendants().find((node: any) => node.data.id === nodeId)?.parent;
 
               if (parentNode) {
-                  await render(parentNode);
+                  await render(parentNode, formattingOptions);
                   return;
               }
-              await render(d3.hierarchy(root));
+              await render(d3.hierarchy(root), formattingOptions);
               return;
           }
-          if (d.children && d.depth !== 0) render(d);
+          if (d.children && d.depth !== 0) render(d, formattingOptions);
         })
         .on('mouseover' + NS, (event: MouseEvent, d: any) => {
           const target = event.currentTarget as SVGPathElement;
           d3.select(target).style('cursor', d.children ? 'pointer' : 'default');
+          const strokeColor = colors.get('contrastInverse') ?? '#000'; // Default stroke color
+          d3.select(target).attr('stroke', strokeColor); // Set the stroke color on hover
 
           updateTooltipText(d.ancestors()
                 .map((a: any) => a.data.name)
@@ -117,26 +150,30 @@
         })
         .on('mousemove' + NS, (event: MouseEvent) => {
         })
-        .on('mouseout' + NS, (event: MouseEvent, d: any) => {
+        .on('mouseout' + NS, (event: MouseEvent, d: d3.HierarchyRectangularNode<BlockNode>) => {
           const target = event.currentTarget as SVGPathElement;
-          d3.select(target).attr('stroke', getColor(d.data.label).text || '#000');
+          const strokeColor = getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).border;
+          d3.select(target).attr('stroke', strokeColor); 
           updateTooltipText(['']);
         });
     }
 
 
-    function setupPathEnter(rootNode: d3.HierarchyNode<BlockNode> , paths: d3.Selection<SVGPathElement, d3.HierarchyRectangularNode<BlockNode>, SVGGElement, unknown>){
+    function setupPathEnter(
+                          rootNode: d3.HierarchyNode<BlockNode> , 
+                          paths: d3.Selection<SVGPathElement, d3.HierarchyRectangularNode<BlockNode>, SVGGElement, unknown>,
+                          formattingOptions: ConditionalFormatting[]) {
       
       const pathsEnter = paths.enter()
         .append('path')
-        .attr('fill',  d => getColor(d.data.label).fill ?? '#000')
-        .attr('stroke', d => getColor(d.data.label).text ?? '#fff')
-        .attr('d',      d => arc(arcState(d)))                 // first draw
+        .attr('fill',  (d: d3.HierarchyRectangularNode<BlockNode>) => getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).fill)
+        .attr('stroke', (d: d3.HierarchyRectangularNode<BlockNode>) => getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).text)
+        .attr('d',      (d: d3.HierarchyRectangularNode<BlockNode>) => arc(arcState(d)))                 // first draw
         .each(function (d) {
             (this as SVGPathElement & { _curr: ArcDatum })._curr = arcState(d);
         })
         .call((sel: d3.Selection<SVGPathElement, d3.HierarchyRectangularNode<BlockNode>, SVGGElement, unknown>) => {
-          addArcListeners(rootNode, sel);
+          addArcListeners(rootNode, sel, formattingOptions);
         })
 
         pathsEnter.merge(paths as any)
@@ -151,25 +188,25 @@
             self._curr = i(1);                     // cache for next time
             return (t: number) => arc(i(t)) || ''; // ensure a string is always returned
         })
-        .attr('fill',  d => getColor(d.data.label).fill  ?? '#000')
-        .attr('stroke',d => getColor(d.data.label).text ?? '#fff');
+        .attr('fill',  d => getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).fill)
+        .attr('stroke',d => getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).border);
 
 
-        pathsEnter.attr('stroke', d => getColor(d.data.label).text ?? '#fff')
+        pathsEnter.attr('stroke', d => getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).text)
 
     }
 
     /**
      * Render (or re‑render) the diagram with `rootNode` as the new root.
      */
-    async function render(rootNode: d3.HierarchyNode<BlockNode>) {
+    async function render(rootNode: d3.HierarchyNode<BlockNode>, formattingOptions: ConditionalFormatting[] ) {
         if(rootNode.children?.length === 0) return;
 
         conditionalFormattingRuleMap.clear();
 
         rootNode.each((d: d3.HierarchyNode<BlockNode>) => {
           if (d.data) {
-            const rules = getConditionalRules(d.data);
+            const rules = getConditionalRules(d.data, formattingOptions);
             conditionalFormattingRuleMap.set(d.data.id, rules);
           }
         });
@@ -186,7 +223,7 @@
           .selectAll<SVGPathElement, typeof nodes[0]>('path')
           .data(nodes, d => d.data.id ?? d.data.name);
 
-        setupPathEnter(rootNode, paths);
+        setupPathEnter(rootNode, paths, formattingOptions);
 
         paths.exit()
         .transition()
@@ -219,7 +256,7 @@
           .attr('dy', '0.35em')
           .attr('text-anchor', 'middle') // ⬅ left‑align all wrapped lines
           .attr('font-size', '0.3em')
-          .attr('fill', (d: any) => (getColor(d.data.label).text || '#000'))
+          .attr('fill', (d: any) => (getColor(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []).text || '#000'))
           .style('opacity', 0);
   
         function labelTransform(d: d3.HierarchyRectangularNode<BlockNode>) {
@@ -230,9 +267,8 @@
           return `rotate(${x}) translate(${y},0) rotate(${x < 90 ? 0 : 180})`;
         }
   
-        const textUpdate = textsEnter.merge(texts as any)
-          .text((d: any) => d.data.name);
-
+        const textUpdate = textsEnter.merge(texts as d3.Selection<SVGTextElement, d3.HierarchyNode<BlockNode>, SVGGElement, unknown>)
+          .text((d: any) => getTextContent(d.data, conditionalFormattingRuleMap.get(d.data.id) ?? []));
 
         textUpdate
           .call(sunBurstWrap, 1.1)
@@ -244,7 +280,14 @@
 
     $effect(() => {
 
-      // console.log('nodes', nodes);
+    });
+
+    const formattingOptions = liveQuery(() => {
+      return idb.conditionalFormatting
+        .where('perspectiveId')
+        .equals(perspectiveId)
+        .and((rule) => rule.isEnabled && !(rule.ignoredDiagrams?.includes(diagramId) ?? false))
+        .toArray();
     });
 
 
@@ -261,7 +304,11 @@
         return;
       }
 
-      await render(d3.hierarchy(root));
+      formattingOptions.subscribe(async (options) => {
+        if (!options) return;
+        await render(d3.hierarchy(root), options);
+      });
+
     });
 
   function removePathListeners() {

@@ -127,6 +127,12 @@
   left: 0;
   right: unset;
   bottom: unset;
+  height: 100%;
+}
+
+.side-dialogue>article {
+  height: 100%;
+  margin-bottom: 0;
 }
 
 .article-button {

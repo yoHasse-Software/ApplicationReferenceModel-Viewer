@@ -3,43 +3,53 @@
     import { onMount, tick } from 'svelte';
     import * as d3 from 'd3';
     import type { BlockNode} from '$lib/types';
-    import {  emptyOptions, getConditionalRules} from '$lib/datastore.svelte';
+    import {  emptyOptions, getConditionalRules, isDialogueOpen, openDialogueOption} from '$lib/datastore.svelte';
     import { wrap } from '$lib/d3Utils';
     import { SvelteMap } from 'svelte/reactivity';
     import { getPicoColors } from '$lib/colorUtils';
-    import type { ConditionalFormatting, DiagramOptions } from './db/dataRepository';
+    import type { ConditionalFormatting, DiagramOptions, Entity } from './db/dataRepository';
     import { idb } from './db/dexie';
     import { page } from '$app/state';
+    import { liveQuery } from 'dexie';
+    import InformationDialogue from './dialogues/InformationDialogue.svelte';
     
     const { 
         root,
+        perspectiveId,
+        diagramId,
         nestedBlockOptions,
         updateTooltipText,
+        openInfoDialogue,
         xRootOffset = 0,
         yRootOffset = 0,
 
      }: { 
         root: BlockNode,
+        perspectiveId: number,
+        diagramId: number,
         nestedBlockOptions: DiagramOptions,
         updateTooltipText: (text: string[]) => void,
+        openInfoDialogue: (id: string) => Promise<void>,
         xRootOffset?: number,
         yRootOffset?: number,
      } = $props();
 
-    const perspectiveId = parseInt(page.params.id || '0', 10); // Get the perspective ID from the URL parameters
-    const diagramId = parseInt(page.params.diagramId || '0', 10); // Get the diagram ID from the URL parameters
+    const NS = '.nsb'; 
 
     let group: SVGGElement;
 
     const colors = new SvelteMap<string, string[]>();
 
 
-
-    function drawNode(node: BlockNode, conditionalFormattingOptions: ConditionalFormatting[], parentGroup: any) {
-      const options = nestedBlockOptions;
-      const levelIdx = options.labelHierarchy.indexOf(node.label) || 0;
+    function drawNode(node: BlockNode, conditionalFormattingOptions: ConditionalFormatting[], parentGroup: d3.Selection<SVGGElement, unknown, null, undefined>) {
+      if(!nestedBlockOptions) return; // Check if nestedBlockOptions is defined
+      if(!nestedBlockOptions.labelHierarchy){
+        console.error("Label hierarchy is not defined in nestedBlockOptions.");
+        return;
+      }
+      const levelIdx = nestedBlockOptions.labelHierarchy.indexOf(node.label) || 0;
       const level = levelIdx > -1 ? levelIdx : 0; // Default to 0 if not found
-      const isLeaf = level === options.labelHierarchy.length - 1;
+      const isLeaf = level === nestedBlockOptions.labelHierarchy.length - 1;
 
       const fillColor = isLeaf ? colors.get('primary') : level % 2 === 0 ? colors.get('secondary') : colors.get('contrastInverse');
       const textColor =  isLeaf ? colors.get('contrastInverse') : level % 2 === 0 ? colors.get('contrastInverse') : colors.get('secondary');
@@ -54,7 +64,7 @@
       // Only use the last color if multiple rules are applied
       const borderColor = conditionalFormatting.findLast(rule => rule.styling.borderColor.isSet)?.styling.borderColor.color || fillColor || "#fff";
 
-      const titleModel = options.titleModel || nestedBlockOptions.titleModel!;
+      const titleModel = nestedBlockOptions.titleModel!;
 
       const group = parentGroup.append("g")
         .attr("data-nodename", node.name)
@@ -79,7 +89,7 @@
           .attr("fill", bgColor || "#fff")
           .attr("rx", 10) // Rounded corners
           .attr("ry", 10); // Rounded corners
-           // Border width
+          
       }
 
       group.append("rect")
@@ -102,6 +112,26 @@
         .text(`${node.name} ${textContent}`)
         .call(wrap, node.width - titleModel.offsets.left - titleModel.offsets.right); // Wrap the text to fit within the node width
 
+      const rawInfoSvg = `<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>`;
+
+      group.append("svg:image")
+        .attr("transform", `translate(${node.width - 24 - titleModel.offsets.right-titleModel.offsets.left}, ${titleModel.offsets.top})`)
+        .attr("xlink:href", "/icons/tabler/info-circle.svg")
+        .attr("data-nodeid", node.id)
+        .on('mouseover' + NS, (event: MouseEvent, d: any) => {
+          const target = event.currentTarget as SVGPathElement;
+          d3.select(target).style('cursor', 'pointer');
+        })
+        .on('click' + NS, async (event: MouseEvent, d: any) => {
+          const target = event.currentTarget as SVGPathElement;
+          // data-nodeid is the id of the node
+          const nodeIdStr = target.getAttribute('data-nodeid') || '';
+          await openInfoDialogue(nodeIdStr);
+        })
+        .on('mouseout' + NS, (event: MouseEvent, d: any) => {
+          const target = event.currentTarget as SVGPathElement;
+          d3.select(target).style('cursor', 'default');
+        });
 
       
       // Do a foreach which sends the child node and also previous node to the next level
@@ -132,6 +162,13 @@
 
     let initialized = $state(false); // Flag to check if the diagram is initialized
     
+    const formattingOptions = liveQuery(() => {
+      return idb.conditionalFormatting
+        .where('perspectiveId')
+        .equals(perspectiveId)
+        .and((rule) => rule.isEnabled && !(rule.ignoredDiagrams?.includes(diagramId) ?? false))
+        .toArray();
+    });
 
     onMount(async () => {
 
@@ -143,21 +180,28 @@
         colors.set(key, [color]);
       });
 
-      const formattingOptions = await idb.conditionalFormatting
-        .where('perspectiveId')
-        .equals(perspectiveId)
-        .and((rule) => !(rule.ignoredDiagrams?.includes(diagramId) ?? false))
-        .toArray();
+      if(!nestedBlockOptions){
+        console.error("Nested block options are not defined.");
+        return;
+      }
 
-      drawBlockDiagram(root, formattingOptions, d3.select(group));
-
-
+      formattingOptions.subscribe((options) => {
+        if (!options) return;
+        console.log('Conditional Formatting Options:', options);
+        console.log(diagramId);
+        drawBlockDiagram(root, options, d3.select(group));
+        
+      });
+      
       initialized = true; // Set initialized to true after the first render
 
     });
 
 
   </script>
+
+
+
 
   <!-- <button onclick={print} >Print</button> -->
   <g bind:this={group} data-nodename={root.name} transform="translate({xRootOffset}, {yRootOffset})" class="arcs-layer">

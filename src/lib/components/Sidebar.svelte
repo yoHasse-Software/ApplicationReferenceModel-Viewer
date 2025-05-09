@@ -69,7 +69,7 @@
 
 </script>
 
-<div class="sidebar-container" class:sidebar-open={isSidebarVisible}>
+<div class="sidebar-container" class:closed={isDialogueOpen()} class:sidebar-open={isSidebarVisible}>
     {#if !isDialogueOpen()}
 
     <div class="sidebar-buttons" transition:fly={{ x: -20}}>
@@ -121,7 +121,11 @@
         max-height: 100vh;
         z-index: 1000;
         max-width: 448px;
+        min-width: 4rem;
+    }
 
+    .sidebar-container.closed {
+        pointer-events: none;
     }
 
     .sidebar-buttons {

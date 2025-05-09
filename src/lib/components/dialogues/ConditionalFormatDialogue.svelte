@@ -16,7 +16,7 @@
     const { perspectiveId, diagramId }: { perspectiveId: number, diagramId: number } = $props();
 
     const isOnPerspectivePage = diagramId === 0;
-    let ignoredDiagramNames: string[] = [];
+    let ignoredDiagramNames: string[] = $state([]);
     
     
     let detailsRefs: (HTMLDetailsElement)[] = $state([]);
@@ -152,14 +152,17 @@
         }
 
         // TODO: Add diagrams that are ignored, below doesn't work...
-
-        for(let index = 0; index < formattingRules.length; index++) {
-            const rule = formattingRules[index];
-            if(rule.ignoredDiagrams?.length > 0) {
-                const diagramNames = await idb.diagramOptions.where('id').anyOf(rule.ignoredDiagrams).toArray();
-                ignoredDiagramNames.push(...diagramNames.map((d) => d.name));
+        if(!isOnPerspectivePage){
+            for(let index = 0; index < formattingRules.length; index++) {
+                const rule = formattingRules[index];
+                if(rule.ignoredDiagrams?.length > 0) {
+                    const diagramNames = await idb.diagramOptions.where('id').anyOf(rule.ignoredDiagrams).toArray();
+                    ignoredDiagramNames.push(...diagramNames.map((d) => d.name));
+                }
             }
         }
+
+
 
         console.log("Conditional formatting rules: ", formattingRules);
         
@@ -195,13 +198,15 @@
         <article>
             <header>
                 <span>Enabled Rules
-                    {#if diagramId > 0}
-                        for {diagramId}. Disable to ignore in this specific diagram.
-                        {:else}
-                        for all diagrams. Disable to ignore in all diagrams.
-                    {/if}
                 </span>
             </header>
+            <small><em>
+                {#if diagramId > 0}
+                Following are enabled for current diagram. Disable to ignore in this specific diagram.
+                {:else}
+                Following are enabled for all diagrams. Disable to ignore globally for this perspective.
+            {/if}
+            </em></small>
             {#each formattingRules as rule, index }
                 <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
                     <label class="checkbox-label">
@@ -211,13 +216,23 @@
                 </div>
             {/each}
             <div>
+                {#if isOnPerspectivePage}
+
+                <hr/>
+            <small><em>Following diagrams has disabled this conditional rule</em></small>
+
+            <div class="grid" style="grid-template-columns: repeat(4,1fr); gap: 1rem; align-items: center;">
+            
             {#each ignoredDiagramNames as name}
-                <div class="grid" style="grid-template-columns: 1fr auto; gap: 1rem; align-items: center;">
+            <div class="outline" style="display: flex;border: 1px solid var(--pico-primary);  padding: 0.5rem; border-radius: 0.5rem; background-color: var(--pico-primary-light);">
+                <span style="margin:auto;">{name} (Ignored)</span>
+            </div>
                     
-                        {name} (Ignored)
-                    
-                </div>
             {/each}
+            </div>
+            {/if}
+
+
         </div>
 
 
